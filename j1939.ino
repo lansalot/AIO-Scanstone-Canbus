@@ -42,7 +42,7 @@ long j1939_encode(unsigned long pgn, byte priority, byte src_addr, byte dest_add
 	return id;
 }
 
-void sendISOBUS_65267_65256() 
+void sendcan2_65267_65256() 
 {
 	CANFrame msg;
 	msg.set_extended(true);
@@ -52,7 +52,7 @@ void sendISOBUS_65267_65256()
 	msg.set_id(j1939_encode(65267, 6, CANBUS_ModuleID, 255));
 	msg.get_data()->uint32[0] = (pivotLat + 210.0) * 10000000;
 	msg.get_data()->uint32[1] = (pivotLon + 210.0) * 10000000;
-	ISO_Bus.write(msg);
+	can2.write(msg);
 
 	//Vehicle direction & speed, pgn 65256
 	msg.set_id(j1939_encode(65256, 6, CANBUS_ModuleID, 255));
@@ -60,11 +60,11 @@ void sendISOBUS_65267_65256()
 	msg.get_data()->uint16[1] = gpsSpeed * 256;				//Speed km/hr
 	msg.get_data()->uint16[2] = 200 * 128;					//Pitch zero
 	msg.get_data()->uint16[3] = (pivotAltitude + 2500) * 8;	//Altitude meters - Only 12cm resolution ( pivotAltitude is 1cm resolution)
-	ISO_Bus.write(msg);
+	can2.write(msg);
 
 }
 
-void sendISOBUS_65254() 
+void sendcan2_65254() 
 {
 	CANFrame msg1;
 	msg1.set_extended(true);
@@ -73,11 +73,11 @@ void sendISOBUS_65254()
 	//GPS time, pgn 65254
 	msg1.set_id(j1939_encode(65254, 6, CANBUS_ModuleID, 255));
 	msg1.get_data()->uint64 = 0xFFFFFFFFFFFFFFFF;
-	ISO_Bus.write(msg1);
+	can2.write(msg1);
 
 }
 
-void sendISOBUS_129029() 
+void sendcan2_129029() 
 {
 	Update_N2K_129029_Buffer();
 
@@ -103,7 +103,7 @@ void sendISOBUS_129029()
 	n2k_fastPackets.buf[6] = N2K_129029_Data[4];
 	n2k_fastPackets.buf[7] = N2K_129029_Data[5];
 
-	ISO_Bus.write(n2k_fastPackets);
+	can2.write(n2k_fastPackets);
 
 	//2 of 7
 	n2k_fastPackets.buf[0] = n2k_fastPackets.buf[0] + 1;
@@ -115,7 +115,7 @@ void sendISOBUS_129029()
 	n2k_fastPackets.buf[6] = N2K_129029_Data[11];
 	n2k_fastPackets.buf[7] = N2K_129029_Data[12];
 
-	ISO_Bus.write(n2k_fastPackets);
+	can2.write(n2k_fastPackets);
 
 	//3 of 7
 	n2k_fastPackets.buf[0] = n2k_fastPackets.buf[0] + 1;
@@ -127,7 +127,7 @@ void sendISOBUS_129029()
 	n2k_fastPackets.buf[6] = N2K_129029_Data[18];
 	n2k_fastPackets.buf[7] = N2K_129029_Data[19];
 
-	ISO_Bus.write(n2k_fastPackets);
+	can2.write(n2k_fastPackets);
 
 	//4 of 7
 	n2k_fastPackets.buf[0] = n2k_fastPackets.buf[0] + 1;
@@ -139,7 +139,7 @@ void sendISOBUS_129029()
 	n2k_fastPackets.buf[6] = N2K_129029_Data[25];
 	n2k_fastPackets.buf[7] = N2K_129029_Data[26];
 
-	ISO_Bus.write(n2k_fastPackets);
+	can2.write(n2k_fastPackets);
 
 	//5 of 7
 	n2k_fastPackets.buf[0] = n2k_fastPackets.buf[0] + 1;
@@ -151,7 +151,7 @@ void sendISOBUS_129029()
 	n2k_fastPackets.buf[6] = N2K_129029_Data[32];		//Integrity 2 bit, reserved 6 bits
 	n2k_fastPackets.buf[7] = N2K_129029_Data[33];		//Satellites
 
-	ISO_Bus.write(n2k_fastPackets);
+	can2.write(n2k_fastPackets);
 
 	//6 of 7
 	n2k_fastPackets.buf[0] = n2k_fastPackets.buf[0] + 1;
@@ -163,7 +163,7 @@ void sendISOBUS_129029()
 	n2k_fastPackets.buf[6] = N2K_129029_Data[39];
 	n2k_fastPackets.buf[7] = N2K_129029_Data[40];
 
-	ISO_Bus.write(n2k_fastPackets);
+	can2.write(n2k_fastPackets);
 
 	//7 of 7
 	n2k_fastPackets.buf[0] = n2k_fastPackets.buf[0] + 1;
@@ -175,7 +175,7 @@ void sendISOBUS_129029()
 	n2k_fastPackets.buf[6] = N2K_129029_Data[46];
 	n2k_fastPackets.buf[7] = 0xFF;						//Spare
 
-	ISO_Bus.write(n2k_fastPackets);
+	can2.write(n2k_fastPackets);
 
 	if(frameCount++ > 7) frameCount = 0;	//We can only use 3 bits as the frame counter
 }

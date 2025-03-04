@@ -126,12 +126,12 @@ void GGA_Handler() //Rec'd GGA
 
     static int GPS_1hz = 0;
 
-    if (sendGPStoISOBUS)
+    if (sendGPStocan2)
     {
         if (GPS_1hz > 9)
         {
             GPS_1hz = 0;
-            sendISOBUS_129029();
+            sendcan2_129029();
         }
 
         GPS_1hz++;

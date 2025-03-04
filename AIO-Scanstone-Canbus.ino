@@ -1,3 +1,20 @@
+
+//Tool Steer
+bool useToolSteer = 1;
+
+float toolXTE = 0;
+float tractorXTE = 0;
+float toolSteerAngleSetPoint = 0;
+
+int8_t integralGain = 5;
+float integral = 0;
+float pivotDistanceError = 0;
+float pivotDistanceErrorLast = 0;
+int16_t integralCounter = 0;
+float pivotDerivative = 0;
+bool Autosteer_running = true; //Auto set off in autosteer setup
+
+
 /*
  * UDP Autosteer code for Teensy 4.1
  * For AgOpenGPS and CANBUS Autosteer ready tractors
@@ -19,7 +36,7 @@
  //29.01.2023  - Add WAS mapping option to fix wheel angle to turning radius conversion
  //            - Add Danfoss PVED-CL setup options (Claas mods mainly)
  //            - Add CaseIH/New Holland engage from CAN options
- //05.03.2023  - Add GPS to ISOBUS option
+ //05.03.2023  - Add GPS to can2 option
  //            - Add RVC BNO08x option and remove CMPS14 option
 
  // GPS forwarding mode: (Serial Bynav etc)
@@ -45,7 +62,7 @@
  //Normal settings P=15, Max=254, Low=5, Min=1 - Note: New version of AgOpen "LowPWM" is removed and "MinPWM" is used as Low for CANBUS setups (MinPWM hardcoded in .ino coded to 1)
  //Some tractors have very fast valves, this smooths out the setpoint from AgOpen
 
- //Workswitch can be operated via PCB or CAN (Will need to setup CAN Messages in ISOBUS section)
+ //Workswitch can be operated via PCB or CAN (Will need to setup CAN Messages in can2 section)
  //17.09.2021 - If Pressure Sensor selected, Work switch will be operated when hitch is less than pressure setting (0-250 x 0.4 = 0-100%) 
  //             Note: The above is temporary use of unused variable, as one day we will get hitch % added to AgOpen
  //             Note: There is a AgOpenGPS on MechanicTony GitHub with these two labels & picture changed
@@ -108,6 +125,8 @@ extern "C" uint32_t set_arm_clock(uint32_t frequency); // required prototype
 extern float tempmonGetTemp(void);
 elapsedMillis tempChecker;
 
+
+
 //----Teensy 4.1 Ethernet--Start---------------------
 #include <NativeEthernet.h>
 #include <NativeEthernetUdp.h>
@@ -168,7 +187,8 @@ boolean ShowCANData = 1;        //Variable for Showing CAN Data
 boolean goDown = false, endDown = false, bitState = false, bitStateOld = false;  //CAN Hitch Control
 byte hydLift = 0;
 
-
+uint16_t setCurve = 32128;       //Variable for Set Curve to CAN
+uint16_t estCurve = 32128;       //Variable for WAS from CAN
 
 //WAS Calabration
 float inputWAS[] = { -50.00, -45.0, -40.0, -35.0, -30.0, -25.0, -20.0, -15.0, -10.0, -5.0, 0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0 };  //Input WAS do not adjust
@@ -199,7 +219,7 @@ float pitch = 0;
 float yaw = 0;
 
 //GPS Data
-bool sendGPStoISOBUS = true;
+bool sendGPStocan2 = true;
 double pivotLat, pivotLon, fixHeading, pivotAltitude;
 float utcTime, geoidalGGA;
 uint8_t fixTypeGGA, satsGGA;
@@ -601,6 +621,9 @@ void loop()
 		if (watchdogTimer < WATCHDOG_THRESHOLD)
 		{
 			steerAngleError = steerAngleActual - steerAngleSetPoint;   //calculate the steering error
+			if (useToolSteer) steerAngleError = steerAngleActual - toolSteerAngleSetPoint;   //calculate the steering error
+			else steerAngleError = steerAngleActual - steerAngleSetPoint;   //calculate the steering error
+
 
 			if (Brand != 7)
 			{
@@ -630,7 +653,7 @@ void loop()
 
 		//-------CAN Set Curve ---------------
 
-		VBus_Send();
+		can3Send();
 
 		//send empty pgn to AgIO to show activity
 		if (++helloCounter > 10)
@@ -646,17 +669,12 @@ void loop()
 	//delay(1); 
 
 	//--CAN--Start--
-	VBus_Receive();
-	ISO_Receive();
-	K_Receive();
+	can3Receive();
+	can2Receive();
+	//K_Receive();
 
 	if ((millis()) > relayTime) {
-#ifdef isAllInOneBoard
-		digitalWrite(AUTOSTEER_STANDBY_LED, HIGH);
-		digitalWrite(AUTOSTEER_ACTIVE_LED, LOW);
-#else
 		digitalWrite(engageLED, LOW);
-#endif
 		engageCAN = 0;
 	}
 
@@ -889,6 +907,67 @@ void udpSteerRecv(int sizeToRead)
 			pgn = dataLength = 0;
 		}
 
+		// Tool Steer
+		else if (udpData[3] == 0xE9 && Autosteer_running)  //233
+		{
+			int16_t temp_int16;
+
+			temp_int16 = (int16_t)(udpData[8] | ((int8_t)udpData[9]) << 8);
+			if (temp_int16 < 29000) tractorXTE = (float)temp_int16 * 0.001;
+			else tractorXTE = 0.00;
+
+			Serial.print("Tractor XTE = ");
+			Serial.print(tractorXTE, 3);
+
+			//integral slider is set to 0
+			if (integralGain != 0)
+			{
+				pivotDistanceError = tractorXTE * 0.2 + pivotDistanceError * 0.8;
+
+				if (integralCounter++ > 4)
+				{
+					pivotDerivative = pivotDistanceError - pivotDistanceErrorLast;
+					pivotDistanceErrorLast = pivotDistanceError;
+					integralCounter = 0;
+					pivotDerivative *= 2;
+				}
+
+				if (steerSwitch == 0 && abs(pivotDerivative) < (0.1) && gpsSpeed > 0.5)
+				{
+					//if over the line heading wrong way, rapidly decrease integral
+					if ((integral < 0 && tractorXTE < 0) || (integral > 0 && tractorXTE > 0))
+					{
+						integral += pivotDistanceError * integralGain * -0.04;
+					}
+					else
+					{
+						if (abs(tractorXTE) > 0.02)
+						{
+							integral += pivotDistanceError * integralGain * -0.02;
+							if (integral > 0.2) integral = 0.2;
+							else if (integral < -0.2) integral = -0.2;
+						}
+					}
+				}
+				else
+				{
+					integral *= 0.95;
+				}
+			}
+			else integral = 0;
+
+			Serial.print("\tIntegral = ");
+			Serial.print(integral, 3);
+
+			toolSteerAngleSetPoint = (tractorXTE + -integral) * -20;
+			if (toolSteerAngleSetPoint > 20.0) toolSteerAngleSetPoint = 20.0;
+			else if (toolSteerAngleSetPoint < -20.0) toolSteerAngleSetPoint = -20.0;
+
+			Serial.print("\tSetpoint = ");
+			Serial.println(toolSteerAngleSetPoint, 1);
+			}
+
+
 		//steer settings
 		else if (udpData[3] == 0xFC)  //252
 		{
@@ -981,12 +1060,12 @@ void udpSteerRecv(int sizeToRead)
 
 			static int GPS_5hz = 0;
 
-			if (sendGPStoISOBUS)
+			if (sendGPStocan2)
 			{
 				if (GPS_5hz > 4)
 				{
 					GPS_5hz = 0;
-					sendISOBUS_65267_65256();
+					sendcan2_65267_65256();
 				}
 
 				GPS_5hz++;
@@ -1084,51 +1163,6 @@ void EncoderFunc()
 		pulseCount++;
 		encEnable = false;
 	}
-}
-
-//Hitch Control------------------------------------------------------------
-void SetRelaysFendt(void)
-{
-	if (goDown)   liftGo();   //Lift Go button if pressed - CAN Page
-	if (endDown)   liftEnd(); //Lift End button if pressed - CAN Page
-
-	//If Invert Relays is selected in hitch settings, Section 1 is used as trigger.
-	if (aogConfig.isRelayActiveHigh == 1) {
-		bitState = (bitRead(relay, 0));
-	}
-	//If not selected hitch command is used on headland used as Trigger  
-	else {
-		if (hydLift == 1) bitState = 1;
-		if (hydLift == 2) bitState = 0;
-	}
-	//Only if tool lift is enabled AgOpen will press headland buttions via CAN
-	if (aogConfig.enableToolLift == 1) {
-		if (bitState && !bitStateOld) pressGo(); //Press Go button - CAN Page
-		if (!bitState && bitStateOld) pressEnd(); //Press End button - CAN Page
-	}
-
-	bitStateOld = bitState;
-
-}
-
-void SetRelaysClaas(void)
-{
-	//If Invert Relays is selected in hitch settings, Section 1 is used as trigger.  
-	if (aogConfig.isRelayActiveHigh == 1) {
-		bitState = (bitRead(relay, 0));
-	}
-	//If not selected hitch command is used on headland used as Trigger  
-	else {
-		if (hydLift == 1) bitState = 1;
-		if (hydLift == 2) bitState = 0;
-	}
-	//Only if tool lift is enabled AgOpen will press headland buttions via CAN
-	if (aogConfig.enableToolLift == 1) {
-		if (bitState && !bitStateOld) pressCSM1(); //Press Go button - CAN Page
-		if (!bitState && bitStateOld) pressCSM2(); //Press End button - CAN Page
-	}
-
-	bitStateOld = bitState;
 }
 
 //Rob Tillaart, https://github.com/RobTillaart/MultiMap

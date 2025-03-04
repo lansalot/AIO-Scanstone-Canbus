@@ -12,7 +12,7 @@ If you're using the code with Tony's board, leave the // characters in place
 ---
 
 *Version 5.03.2023*
-- Add GPS to ISOBUS option
+- Add GPS to can2 option
 - Add RVC BNO08x option and remove CMPS14 option
 
 *Version 31.12.2022*  
