@@ -965,8 +965,7 @@ void udpSteerRecv(int sizeToRead)
 
 			Serial.print("\tSetpoint = ");
 			Serial.println(toolSteerAngleSetPoint, 1);
-			}
-
+		}
 
 		//steer settings
 		else if (udpData[3] == 0xFC)  //252
