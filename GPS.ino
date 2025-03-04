@@ -1,7 +1,14 @@
+#ifdef isAllInOneBoard
 #define GPS Serial7
-#define GPS_Dual Serial2
-#define GPS_RTK Serial3
-#define RTK_Baud 115200
+#else
+#define GPS Serial3
+#endif // isAllInOneBoard
+
+#ifndef isAllInOneBoard
+#define RadioRTK Serial7
+#define RadioBaudRate 115200
+char RTKrxbuffer[512];      //Extra serial rx buffer
+#endif
 
 char rxbuffer[512];         //Extra serial rx buffer
 char txbuffer[512];         //Extra serial tx buffer

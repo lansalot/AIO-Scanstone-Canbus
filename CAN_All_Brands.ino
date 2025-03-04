@@ -150,7 +150,6 @@ void can3Receive()
 		{
 			estCurve = ((can3ReceiveData.buf[1] << 8) + can3ReceiveData.buf[0]);
 			Time = millis();
-			digitalWrite(engageLED, HIGH);
 			relayTime = ((millis() + 1000));
 		}
 		if (ShowCANData == 1)
