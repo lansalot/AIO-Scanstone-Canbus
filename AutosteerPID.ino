@@ -25,12 +25,7 @@ void calcSteeringPID(void)
 
 	if (steerConfig.MotorDriveDirection) pwmDrive *= -1;
 
-}
-
-//#########################################################################################
-
-void motorDrive(void)
-{
 	setCurve = (setCurve - pwmDrive);
 	pwmDisplay = pwmDrive;
+
 }

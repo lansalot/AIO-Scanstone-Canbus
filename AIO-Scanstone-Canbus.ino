@@ -112,9 +112,8 @@ FlexCAN_T4<CAN3, RX_SIZE_256, TX_SIZE_256> can3;
 #define ledPin 5        //Option for LED, CAN Valve Ready To Steer.
 #define engageLED 24    //Option for LED, to see if Engage message is recived.
 
-
+uint8_t gpsMode = 4;
 uint8_t Brand = 0;              //Variable to set brand via serial monitor.
-uint8_t gpsMode = 4;            //Variable to set GPS mode via serial monitor.
 uint8_t CANBUS_ModuleID = 0x1C; //Used for the Module CAN ID
 
 uint32_t Time;                  //Time Arduino has been running
@@ -352,8 +351,8 @@ void setup()
 		EEPROM.get(40, steerConfig);
 		EEPROM.get(60, networkAddress);
 		//EEPROM.get(80, outputWAS);
-		Brand = EEPROM.read(70);
-		gpsMode = EEPROM.read(72);
+		Brand = 0; // EEPROM.read(70);
+		gpsMode = 4; // EEPROM.read(72);
 	}
 
 	// for PWM High to Low interpolator
@@ -412,12 +411,17 @@ void setup()
 	Serial.println("\r\nSetup complete, waiting for AgOpenGPS");
 	Serial.println("\r\nTo Start AgOpenGPS CANBUS Service Tool Enter 'S'");
 
+	unsigned long start = micros();
+	Serial.available();  // Polling time measurement
+	unsigned long end = micros();
+
+	Serial.print("Time taken: ");
+	Serial.println(end - start); // Should be ~1-2 µs on AVR boards
 }
 // End of Setup
 
 void loop()
 {
-
 	currentTime = millis();
 
 	//--Main Timed Loop----------------------------------   
@@ -498,16 +502,10 @@ void loop()
 
 		if (watchdogTimer < WATCHDOG_THRESHOLD)
 		{
-			steerAngleError = steerAngleActual - steerAngleSetPoint;   //calculate the steering error
 			if (useToolSteer) steerAngleError = steerAngleActual - toolSteerAngleSetPoint;   //calculate the steering error
 			else steerAngleError = steerAngleActual - steerAngleSetPoint;   //calculate the steering error
 
-
-			if (Brand != 7)
-			{
-				calcSteeringPID();  //do the pid
-				motorDrive();       //out to motors the pwm value
-			}
+			calcSteeringPID();  //do the pid
 			intendToSteer = 1; //CAN Curve Inteeded for Steering
 
 		}
@@ -517,11 +515,7 @@ void loop()
 			//****** If CAN engage is ON (1), don't turn off saftey valve ******
 
 			intendToSteer = 0; //CAN Curve NOT Inteeded for Steering   
-			if (Brand != 7)
-			{
-				pwmDrive = 0; //turn off steering motor
-				motorDrive(); //out to motors the pwm value
-			}
+			pwmDrive = 0; //turn off steering motor
 			pulseCount = 0;
 		}
 
@@ -539,13 +533,8 @@ void loop()
 		}
 	} //end of main timed loop
 
-	//This runs continuously, outside of the timed loop, keeps checking for new udpData, turn sense, CAN data etc
-	//delay(1); 
-
-	//--CAN--Start--
 	can3Receive();
 	can2Receive();
-	//K_Receive();
 
 	if ((millis()) > relayTime) {
 		digitalWrite(engageLED, LOW);
@@ -554,7 +543,7 @@ void loop()
 
 	//Service Tool
 	if (Serial.available())
-	{        // Read Data From Serial Monitor 
+	{
 		byte b = Serial.read();
 
 		while (Serial.available()) {
@@ -578,10 +567,8 @@ void loop()
 		imuHandler();   //Get IMU data ready
 	}
 
-	if (gpsMode == 1 || gpsMode == 2)
-		Forward_GPS();
-	else
-		Panda_GPS();
+
+	Panda_GPS();
 
 	Forward_Ntrip();
 
@@ -940,22 +927,6 @@ void udpSteerRecv(int sizeToRead)
 
 				Serial.println(inoVersion); Serial.println();
 
-				if (Brand == 0) Serial.println("Brand = Claas (Set Via Service Tool)");
-				else if (Brand == 1) Serial.println("Brand = Valtra / Massey (Set Via Service Tool)");
-				else if (Brand == 2) Serial.println("Brand = CaseIH / New Holland (Set Via Service Tool)");
-				else if (Brand == 3) Serial.println("Brand = Fendt SCR,S4,Gen6 (Set Via Service Tool)");
-				else if (Brand == 4) Serial.println("Brand = JCB (Set Via Service Tool)");
-				else if (Brand == 5) Serial.println("Brand = FendtOne (Set Via Service Tool)");
-				else if (Brand == 6) Serial.println("Brand = Lindner (Set Via Service Tool)");
-				else if (Brand == 7) Serial.println("Brand = AgOpenGPS (Set Via Service Tool)");
-				else Serial.println("No Tractor Brand Set, Set Via Service Tool");
-
-				Serial.println("\r\nGPS Mode:");
-				if (gpsMode == 1) Serial.println("GPS Forwarding @ 115200 (Set Via Service Tool)");
-				else if (gpsMode == 2) Serial.println("GPS Forwarding @ 460800 (Set Via Service Tool)");
-				else if (gpsMode == 3) Serial.println("Panda Mode @ 115200 (Set Via Service Tool)");
-				else if (gpsMode == 4) Serial.println("Panda Mode @ 460800 (Set Via Service Tool)");
-				else Serial.println("No GPS mode selected - Set Via Service Tool");
 				Serial.println(" --------- ");
 
 			}

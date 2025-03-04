@@ -1,5 +1,10 @@
+#define debugCAN 1
+
 void CAN_setup(void)
 {
+#ifdef debugCAN
+	Serial.println("Extra CAN debugging enabled");
+#endif
 	// can3 is the bus we find the steering on, and it will act as one side of the bridge to can2
 	can3.begin();
 	can3.setBaudRate(250000);
@@ -80,7 +85,7 @@ void can3Send()
 	if (!Autosteer_running) {
 		return;
 	}
-
+	// this would be a steering command (Joy2, in correct orientation) or Joy2 button (to recenter)
 	CAN_message_t msgCAN3;
 	msgCAN3.id = 0x253;
 	msgCAN3.flags.extended = false;
@@ -91,7 +96,18 @@ void can3Send()
 	msgCAN3.buf[3] = 0;
 	msgCAN3.buf[4] = 0;
 	msgCAN3.buf[5] = 0;
-	msgCAN3.buf[6] = 0;
+	if (joystickSteerDirection == JoystickSteerDirection::LeftRight) {
+		if (pwmDrive < 0)
+			msgCAN3.buf[6] |= 4; // Joy2Left
+		else
+			msgCAN3.buf[6] |= 8; // Joy2Right
+	}
+	else {
+		if (pwmDrive < 0)
+			msgCAN3.buf[6] |= 2; // Joy2Down
+		else
+			msgCAN3.buf[6] |= 1; // Joy2Up
+	}
 	msgCAN3.buf[7] = 0;
 	can3.write(msgCAN3);
 }
@@ -101,7 +117,7 @@ void can3Receive()
 	CAN_message_t can3ReceiveData;
 	if (can3.read(can3ReceiveData))
 	{
-		if (can3ReceiveData.id == 0x253 && !Autosteer_running) {
+		if (can3ReceiveData.id == 0x253 && !Autosteer_running) { // we send our own 253s if autosteer is running
 			// nothing to do here, bridge only
 			if (can3ReceiveData.buf[7] & 4) // but do update this. Not that it'll change once up and running, but we do need to take care of it
 				moduleRev = moduleRevision::New;
@@ -109,6 +125,7 @@ void can3Receive()
 				moduleRev = moduleRevision::Old;
 			can2.write(can3ReceiveData);
 		}
+		// update some important variables as the info flies by
 		else if (can3ReceiveData.id == 0x18FF7C02) {
 			flowControl = can3ReceiveData.buf[7];
 			flowControlHMS = can3ReceiveData.buf[6];
@@ -116,14 +133,22 @@ void can3Receive()
 		else if (can3ReceiveData.id == 0xCFF1401)
 			hmsEngaged = can3ReceiveData.buf[0] & 1;
 		else if (can3ReceiveData.id == 0x18FF8902) {
-			if (can3ReceiveData.buf[4] & 1)
+			if (can3ReceiveData.buf[4] & 1) {
+#ifdef debugCAN
+				Serial.println("Joystick orientation is UpDown");
+#endif
 				joystickSteerDirection = JoystickSteerDirection::UpDown;
-			else
+			}
+			else {
+#ifdef debugCAN
 				joystickSteerDirection = JoystickSteerDirection::LeftRight;
+#endif
+				Serial.println("Joystick orientation is LeftRight");
+			}
 		}
 		else if (can3ReceiveData.id == 0xCFF0501)
 		{
-			estCurve = (can3ReceiveData.buf[0]); // Until clarity on Angle/256 means - decimal perhaps?
+			estCurve = ((can3ReceiveData.buf[1] << 8) + can3ReceiveData.buf[0]);
 			Time = millis();
 			digitalWrite(engageLED, HIGH);
 			relayTime = ((millis() + 1000));
@@ -131,8 +156,8 @@ void can3Receive()
 		if (ShowCANData == 1)
 		{
 			Serial.print(Time);
-			Serial.print(", CAN3");
-			Serial.print(", ID: 0x");
+			Serial.print(", CAN3, ID: ");
+			Serial.print(can3ReceiveData.id, HEX);
 			Serial.print(", DATA: ");
 			for (uint8_t i = 0; i < 8; i++)
 			{
@@ -163,7 +188,7 @@ void can3Receive()
 				Serial.print(" angle: ");
 				Serial.print(estCurve);
 			}
-
+			Serial.println();
 		}
 	}
 }
