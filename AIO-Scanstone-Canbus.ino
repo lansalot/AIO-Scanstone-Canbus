@@ -1,4 +1,4 @@
-
+#define isAllInOneBoard
 //Tool Steer
 bool useToolSteer = 1;
 
@@ -41,6 +41,15 @@ String inoVersion = ("\r\nAgOpenGPS Tony UDP CANBUS Ver 05.03.2023");
 //How many degrees before decreasing Max PWM
 #define LOW_HIGH_DEGREES 3.0
 
+#ifdef isAllInOneBoard
+#define STEERSW_PIN 32
+#define WORKSW_PIN 34
+#define REMOTE_PIN 37
+#else
+#define STEERSW_PIN 6 //PD6
+#define WORKSW_PIN 7  //PD7
+#define REMOTE_PIN 8  //PB0
+#endif
 
  /////////////////////////////////////////////
 
@@ -48,9 +57,16 @@ String inoVersion = ("\r\nAgOpenGPS Tony UDP CANBUS Ver 05.03.2023");
 #define EEP_Ident 0x5422
 
 //--------------------------- Switch Input Pins ------------------------
+#ifdef isAllInOneBoard
+#define STEERSW_PIN 32
+#define WORKSW_PIN 34
+#define REMOTE_PIN 37
+#else
 #define STEERSW_PIN 6 //PD6
 #define WORKSW_PIN 7  //PD7
 #define REMOTE_PIN 8  //PB0
+#endif
+
 #define CONST_180_DIVIDED_BY_PI 57.2957795130823
 #define RAD_TO_DEG_X_10 572.95779513082320876798154814105
 
@@ -108,9 +124,17 @@ FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_256> can1;
 FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_256> can2;
 FlexCAN_T4<CAN3, RX_SIZE_256, TX_SIZE_256> can3;
 
-
+#ifdef isAllInOneBoard
+#define Power_on_LED 5            //Red
+#define Ethernet_Active_LED 6     //Green
+#define GPSRED_LED 9              //Red (Flashing = No RTK)
+#define GPSGREEN_LED 10           //Green (ON = RTK)
+#define AUTOSTEER_STANDBY_LED 11  //Red
+#define AUTOSTEER_ACTIVE_LED 12   //Green
+#else
 #define ledPin 5        //Option for LED, CAN Valve Ready To Steer.
 #define engageLED 24    //Option for LED, to see if Engage message is recived.
+#endif
 
 uint8_t gpsMode = 4;
 uint8_t Brand = 0;              //Variable to set brand via serial monitor.
@@ -289,6 +313,11 @@ struct Config
 void setup()
 {
 	Serial.println("\r\n** AIO CANBUS ScanStone dev **\r\n");
+#ifdef isAllInOneBoard
+	Serial.println("All In One Board");
+#else
+	Serial.println("CANBUS board");
+#endif
 	delay(500);                         //Small delay so serial can monitor start up
 
 	set_arm_clock(450000000);           //Set CPU speed to 450mhz
@@ -297,6 +326,15 @@ void setup()
 
 	//keep pulled high and drag low to activate, noise free safe   
 
+#ifdef isAllInOneBoard
+	pinMode(Power_on_LED, OUTPUT);
+	digitalWrite(Power_on_LED, HIGH);
+	pinMode(Ethernet_Active_LED, OUTPUT);
+	pinMode(GPSRED_LED, OUTPUT);
+	pinMode(GPSGREEN_LED, OUTPUT);
+	pinMode(AUTOSTEER_STANDBY_LED, OUTPUT);
+	pinMode(AUTOSTEER_ACTIVE_LED, OUTPUT);
+#endif 
 	pinMode(WORKSW_PIN, INPUT_PULLUP);
 	pinMode(STEERSW_PIN, INPUT_PULLUP);
 	pinMode(REMOTE_PIN, INPUT_PULLUP);
@@ -391,13 +429,16 @@ void setup()
 	//----Teensy 4.1 Ethernet--End---------------------
 
 	//----Teensy 4.1 CANBus--Start---------------------
-
-
+#ifdef isAllInOneBoard
+	pinMode(AUTOSTEER_STANDBY_LED, LOW);
+	pinMode(AUTOSTEER_ACTIVE_LED, LOW);
+#else
 	pinMode(ledPin, OUTPUT);    //CAN Valve Ready LED
 	digitalWrite(ledPin, LOW);
 
 	pinMode(engageLED, OUTPUT);  //CAN engage LED
 	digitalWrite(engageLED, LOW);
+#endif
 
 	Serial.println("\r\nStarting CAN-Bus Ports");
 	Serial.println("Brand = SCANSTONE, forwarding GPS at 460800");
@@ -434,7 +475,16 @@ void loop()
 
 		if (watchdogTimer++ > 250) watchdogTimer = WATCHDOG_FORCE_VALUE;
 
+#ifdef isAllInOneBoard
+		pinMode(AUTOSTEER_STANDBY_LED, LOW);
+		pinMode(AUTOSTEER_ACTIVE_LED, LOW);
+#else
+		pinMode(ledPin, OUTPUT);    //CAN Valve Ready LED
+		digitalWrite(ledPin, LOW);
 
+		pinMode(engageLED, OUTPUT);  //CAN engage LED
+		digitalWrite(engageLED, LOW);
+#endif
 
 		if (steerConfig.SteerButton == 0)     // Engaged via screen
 		{
@@ -482,15 +532,10 @@ void loop()
 
 		//DETERMINE ACTUAL STEERING POSITION  *********From CAN-Bus************
 
-		{
 			// TODO Sort out the steering curve here
-			if (intendToSteer == 0) setCurve = estCurve;  //Not steering so setCurve = estCurve
+		if (intendToSteer == 0) setCurve = estCurve;  //Not steering so setCurve = estCurve
 
-			steeringPosition = (setCurve - 32128 + steerSettings.wasOffset);
-			if (Brand == 3) steerAngleActual = (float)(steeringPosition) / (steerSettings.steerSensorCounts * 10);  //Fendt Only
-			else if (Brand == 5) steerAngleActual = (float)(steeringPosition) / (steerSettings.steerSensorCounts * 10);  //Fendt Only
-			else steerAngleActual = (float)(steeringPosition) / steerSettings.steerSensorCounts;
-		}
+		else steerAngleActual = (float)(steeringPosition) / steerSettings.steerSensorCounts;
 
 		//Ackerman fix
 		if (steerAngleActual < 0) steerAngleActual = (steerAngleActual * steerSettings.AckermanFix);
@@ -507,7 +552,6 @@ void loop()
 
 			calcSteeringPID();  //do the pid
 			intendToSteer = 1; //CAN Curve Inteeded for Steering
-
 		}
 		else
 		{
@@ -537,7 +581,12 @@ void loop()
 	can2Receive();
 
 	if ((millis()) > relayTime) {
+#ifdef isAllInOneBoard
+		digitalWrite(AUTOSTEER_STANDBY_LED, HIGH);
+		digitalWrite(AUTOSTEER_ACTIVE_LED, LOW);
+#else
 		digitalWrite(engageLED, LOW);
+#endif
 		engageCAN = 0;
 	}
 
