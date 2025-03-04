@@ -22,66 +22,6 @@ enum JoystickSteerDirection
 };
 JoystickSteerDirection joystickSteerDirection = JoystickSteerDirection::LeftRight;
 
-/*
- * UDP Autosteer code for Teensy 4.1
- * For AgOpenGPS and CANBUS Autosteer ready tractors
- * 4 Feb 2021, Brian Tischler
- * Like all Arduino code - copied from somewhere else :)
- * So don't claim it as your own
- */
-
- //----------------------------------------------------------
-
- // uncomment the following line if you're using the All-In-One-Board
- //#define isAllInOneBoard
-
- //Tony / @Commonrail Version 05.03.2023
- //30.06.2022  - Ryan / @RGM Added JCB CAN engage message
- //02.07.2022  - Added Claas headland from Ryan
- //            - Fix up pilot valve output for Ryan Claas wiring mod 
- //31.12.2022  - Add Panda mode & GPS options, set via serial monitor service tool
- //29.01.2023  - Add WAS mapping option to fix wheel angle to turning radius conversion
- //            - Add Danfoss PVED-CL setup options (Claas mods mainly)
- //            - Add CaseIH/New Holland engage from CAN options
- //05.03.2023  - Add GPS to can2 option
- //            - Add RVC BNO08x option and remove CMPS14 option
-
- // GPS forwarding mode: (Serial Bynav etc)
- // - GPS to Serial3, Forward to AgIO via UDP
- // - Forward Ntrip from AgIO (Port 2233) to Serial3
-
- // Panda Mode 
- // - GPS to Serial3, Forward to AgIO as Panda via UDP
- // - Forward Ntrip from AgIO (Port 2233) to Serial3
- // - BNO08x Data sent with Panda data
-
- //This CAN setup is for CANBUS based steering controllers as below:
- //Danfoss PVED-CL & PVED-CLS (Claas, JCB, Massey Fergerson, CaseIH, New Holland, Valtra, Deutz, Lindner)
- //Fendt SCR, S4, Gen6, FendtOne Models need Part:ACP0595080 3rd Party Steering Unlock Installed
- //Late model Valtra & Massey with PVED-CC valve (Steering controller in Main Tractor ECU)
- //!!Model is selected via serial monitor service tool!! (One day we will will get a CANBUS setup page in AgOpen)
-
- //For engage & disengage via CAN or Button on PCB, select "Button" as switch option in AgOpen 
- //For engage via AgOpen tablet & disengage via CAN, select "None" as switch option and make sure "Remote" is on the steering wheel icon
- //For engage & disengage via PCB switch only select "Switch" as switch option
-
- //PWM value drives set curve up & down, so you need to set the PWM settings in AgOpen
- //Normal settings P=15, Max=254, Low=5, Min=1 - Note: New version of AgOpen "LowPWM" is removed and "MinPWM" is used as Low for CANBUS setups (MinPWM hardcoded in .ino coded to 1)
- //Some tractors have very fast valves, this smooths out the setpoint from AgOpen
-
- //Workswitch can be operated via PCB or CAN (Will need to setup CAN Messages in can2 section)
- //17.09.2021 - If Pressure Sensor selected, Work switch will be operated when hitch is less than pressure setting (0-250 x 0.4 = 0-100%) 
- //             Note: The above is temporary use of unused variable, as one day we will get hitch % added to AgOpen
- //             Note: There is a AgOpenGPS on MechanicTony GitHub with these two labels & picture changed
-
- //Fendt K-Bus - (Not FendtOne models) Note: This also works with Claas thanks to Ryan
- //Big Go/End is operated via hitch control in AgOpen 
- //Arduino Hitch settings must be enableded and sent to module
- //"Invert Relays" Uses section 1 to trigger hitch (Again temporary)
-
- //----------------------------------------------------------
-
-
 String inoVersion = ("\r\nAgOpenGPS Tony UDP CANBUS Ver 05.03.2023");
 ////////////////// User Settings /////////////////////////  
 
