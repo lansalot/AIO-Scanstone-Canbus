@@ -79,16 +79,17 @@ void CAN_setup(void)
 
 void can3Send()
 {
-	if (Autosteer_running) {
-		if ()
+	if (!Autosteer_running) {
+		return;
 	}
+
 	CAN_message_t msgCAN3;
 	msgCAN3.id = 0x0CAD131E;
 	msgCAN3.flags.extended = true;
 	msgCAN3.len = 8;
 	msgCAN3.buf[0] = lowByte(setCurve);
 	msgCAN3.buf[1] = highByte(setCurve);
-	if (Autosteer_running == 1)
+	if (Autosteer_running)
 		msgCAN3.buf[2] = 253;
 	msgCAN3.buf[3] = 0;
 	msgCAN3.buf[4] = 0;
@@ -105,16 +106,20 @@ void can3Receive()
 	CAN_message_t can3ReceiveData;
 	if (can3.read(can3ReceiveData))
 	{
-		if (can3ReceiveData.id == 0x018FF8902) {
-			if (can3ReceiveData.buf[4] == 0)
-				joystickSteerDirection = JoystickSteerDirection::LeftRight;
-			else
-				joystickSteerDirection = JoystickSteerDirection::UpDown;
-		}
 		if (can3ReceiveData.id == 0x253 && !Autosteer_running) {
+			// nothing to do here, bridge only
 			can2.write(can3ReceiveData);
 		}
-		if (can3ReceiveData.id == 0xCFF0501)
+		else if (can3ReceiveData.id == 0xCFF1401) {
+			hmsEngaged = can3ReceiveData.buf[0] & 1;
+		}
+		else if (can3ReceiveData.id == 0x18FF8902) {
+			if (can3ReceiveData.buf[4] & 1)
+				joystickSteerDirection = JoystickSteerDirection::UpDown;
+			else
+				joystickSteerDirection = JoystickSteerDirection::LeftRight;
+		}
+		else if (can3ReceiveData.id == 0xCFF0501)
 		{
 			estCurve = (can3ReceiveData.buf[0]); // Until clarity on Angle/256 means - decimal perhaps?
 			Time = millis();

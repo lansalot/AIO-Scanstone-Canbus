@@ -13,6 +13,7 @@ float pivotDistanceErrorLast = 0;
 int16_t integralCounter = 0;
 float pivotDerivative = 0;
 bool Autosteer_running = true; //Auto set off in autosteer setup
+bool hmsEngaged = false;
 
 enum JoystickSteerDirection
 {
@@ -506,49 +507,14 @@ void loop()
 		if (watchdogTimer++ > 250) watchdogTimer = WATCHDOG_FORCE_VALUE;
 
 
-		//CANBus     
-		if (steeringValveReady == 20 || steeringValveReady == 16)
-			digitalWrite(ledPin, HIGH);
-		else
-			digitalWrite(ledPin, LOW);
 
-		workSwitch = digitalRead(WORKSW_PIN);     // read work switch (PCB pin)
-		if (workCAN == 1) workSwitch = 0;         // If CAN workswitch is on, set workSwitch ON
-
-		if (steerConfig.SteerSwitch == 1)         //steer switch on - off
+		if (steerConfig.SteerButton == 0)     // Engaged via screen
 		{
-			steerSwitch = digitalRead(STEERSW_PIN); //read auto steer enable switch open = 0n closed = Off
-		}
-		else if (steerConfig.SteerButton == 1)     //steer Button momentary
-		{
-			reading = digitalRead(STEERSW_PIN);
-
-			if (engageCAN == 1) reading = 0;              //CAN Engage is ON (Button is Pressed)
-
-			if (reading == LOW && previous == HIGH)
-			{
-				if (currentState == 1)
-				{
-					if (Brand == 3) steeringValveReady = 16;  //Fendt Valve Ready To Steer 
-					if (Brand == 5) steeringValveReady = 16;  //FendtOne Valve Ready To Steer 
-					currentState = 0;
-					steerSwitch = 0;
-				}
-				else
-				{
-					currentState = 1;
-					steerSwitch = 1;
-				}
-			}
+			Autosteer_running = true;
 			previous = reading;
 
 			//--------CAN CutOut--------------------------
-			if (steeringValveReady != 20 && steeringValveReady != 16)
-			{
-				steerSwitch = 1; // reset values like it turned off
-				currentState = 1;
-				previous = HIGH;
-			}
+
 		}
 
 		else     // No steer switch and no steer button 
@@ -577,24 +543,6 @@ void loop()
 			previousStatus = guidanceStatus;
 		}
 
-		if (steerConfig.ShaftEncoder && pulseCount >= steerConfig.PulseCountMax)
-		{
-			steerSwitch = 1; // reset values like it turned off
-			currentState = 1;
-			previous = 0;
-		}
-
-		// Current sensor?
-		if (steerConfig.CurrentSensor)
-		{
-
-		}
-
-		// Pressure sensor?
-		if (steerConfig.PressureSensor)
-		{
-
-		}
 
 		remoteSwitch = digitalRead(REMOTE_PIN); //read auto steer enable switch open = 0n closed = Off
 		switchByte = 0;
