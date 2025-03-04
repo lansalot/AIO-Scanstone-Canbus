@@ -95,12 +95,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AutosteerRelays.ino">
-      <FileType>CppCode</FileType>
-      <DeploymentContent>true</DeploymentContent>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="CAN_All_Brands.ino">
       <FileType>CppCode</FileType>
       <DeploymentContent>true</DeploymentContent>
@@ -134,6 +128,12 @@
   <PropertyGroup>
     <DebuggerFlavor>VisualMicroDebugger</DebuggerFlavor>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+    <IncludePath>$(ProjectDir)..\AIO-Scanstone-Canbus;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\Wire;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\EEPROM;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\SPI;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\NativeEthernet\src;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\FNET\src;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\FlexCAN_T4;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\cores\teensy4;$(ProjectDir)..\..\..\..\appdata\local\arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\arm-none-eabi\include\c++\5.4.1;$(ProjectDir)..\..\..\..\appdata\local\arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\arm-none-eabi\include\c++\5.4.1\arm-none-eabi\armv7e-m\fpu\fpv5-d16;$(ProjectDir)..\..\..\..\appdata\local\arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\arm-none-eabi\include\c++\5.4.1\backward;$(ProjectDir)..\..\..\..\appdata\local\arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\lib\gcc\arm-none-eabi\5.4.1\include;$(ProjectDir)..\..\..\..\appdata\local\arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\lib\gcc\arm-none-eabi\5.4.1\include-fixed;$(ProjectDir)..\..\..\..\appdata\local\arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\arm-none-eabi\include;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\Wire;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\Wire\utility;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\EEPROM;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\NativeEthernet\src;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\NativeEthernet\src\utility;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\FlexCAN_T4</IncludePath>
+    <RemoteCCompileToolExe>$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\bin\arm-none-eabi-g++</RemoteCCompileToolExe>
+    <RemoteCppCompileToolExe>$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\bin\arm-none-eabi-g++</RemoteCppCompileToolExe>
+    <ValidateArchitecture>false</ValidateArchitecture>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)..\AIO-Scanstone-Canbus;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\Wire;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\EEPROM;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\SPI;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\NativeEthernet\src;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\FNET\src;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\FlexCAN_T4;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\cores\teensy4;$(ProjectDir)..\..\..\..\appdata\local\arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\arm-none-eabi\include\c++\5.4.1;$(ProjectDir)..\..\..\..\appdata\local\arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\arm-none-eabi\include\c++\5.4.1\arm-none-eabi\armv7e-m\fpu\fpv5-d16;$(ProjectDir)..\..\..\..\appdata\local\arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\arm-none-eabi\include\c++\5.4.1\backward;$(ProjectDir)..\..\..\..\appdata\local\arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\lib\gcc\arm-none-eabi\5.4.1\include;$(ProjectDir)..\..\..\..\appdata\local\arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\lib\gcc\arm-none-eabi\5.4.1\include-fixed;$(ProjectDir)..\..\..\..\appdata\local\arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\arm-none-eabi\include;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\Wire;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\Wire\utility;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\EEPROM;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\SPI;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\NativeEthernet\src;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\NativeEthernet\src\utility;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\FNET\src;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\FlexCAN_T4;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -148,7 +148,26 @@
       <PreprocessorDefinitions>_VMICRO_INTELLISENSE;__TEENSY4_imxrt1062__;__TEENSY4_IMXRT1062__;__IMXRT1062__;TEENSYDUINO=157;ARDUINO=108010;ARDUINO_TEENSY41;F_CPU=600000000;USB_SERIAL;LAYOUT_US_ENGLISH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\AIO-Scanstone-Canbus;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\Wire;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\EEPROM;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\SPI;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\NativeEthernet\src;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\FNET\src;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\FlexCAN_T4;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\cores\teensy4;$(ProjectDir)..\..\..\..\appdata\local\arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\arm-none-eabi\include\c++\5.4.1;$(ProjectDir)..\..\..\..\appdata\local\arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\arm-none-eabi\include\c++\5.4.1\arm-none-eabi\armv7e-m\fpu\fpv5-d16;$(ProjectDir)..\..\..\..\appdata\local\arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\arm-none-eabi\include\c++\5.4.1\backward;$(ProjectDir)..\..\..\..\appdata\local\arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\lib\gcc\arm-none-eabi\5.4.1\include;$(ProjectDir)..\..\..\..\appdata\local\arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\lib\gcc\arm-none-eabi\5.4.1\include-fixed;$(ProjectDir)..\..\..\..\appdata\local\arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\arm-none-eabi\include;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\Wire;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\Wire\utility;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\EEPROM;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\NativeEthernet\src;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\NativeEthernet\src\utility;$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\hardware\avr\1.57.0\libraries\FlexCAN_T4;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <GccToolChain>$(ProjectDir)..\..\..\..\AppData\Local\Arduino15\packages\teensy\tools\teensy-compile\5.4.1\arm\bin\arm-none-eabi-g++</GccToolChain>
+      <CppLanguageStandard>gnu++1y</CppLanguageStandard>
+      <CLanguageStandard>gnu11</CLanguageStandard>
+      <CAdditionalWarning />
+      <CppAdditionalWarning />
+      <ForcedIncludeFiles>$(ProjectDir)..\..\..\..\..\..\program files\microsoft visual studio\2022\community\common7\ide\extensions\2w2su3tn.wii\Micro Platforms\default\vm-intelli-pre.h;$(ProjectDir)..\..\..\..\AppData\Local\Temp\VMBuilds\AIO-Scanstone-Canbus\teensy41\Debug\.vmintelli\4488e988c00bb35bf71c8c0bdec708f6\vm-intelli-gcc-defines.h;$(ProjectDir)..\..\..\..\..\..\program files\microsoft visual studio\2022\community\common7\ide\extensions\2w2su3tn.wii\Micro Platforms\default\vm-intelli-post.h;$(ProjectDir)__vm\.AIO-Scanstone-Canbus.vsarduino.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <UndefineAllPreprocessorDefinitions>true</UndefineAllPreprocessorDefinitions>
+      <IgnoreStandardIncludePath>true</IgnoreStandardIncludePath>
+      <PreprocessorDefinitions>_VMICRO_INTELLISENSE;__TEENSY4_imxrt1062__;__TEENSY4_IMXRT1062__;_VMDEBUG=1;__IMXRT1062__;TEENSYDUINO=157;ARDUINO=108010;ARDUINO_TEENSY41;F_CPU=600000000;USB_SERIAL;LAYOUT_US_ENGLISH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties config.Debug.customdebug_teensy41_debugger_type="universal" />
+    </VisualStudio>
+  </ProjectExtensions>
 </Project>

@@ -1,5 +1,3 @@
-
-
 void CAN_setup(void)
 {
 	// can3 is the bus we find the steering on, and it will act as one side of the bridge to can2
@@ -84,13 +82,12 @@ void can3Send()
 	}
 
 	CAN_message_t msgCAN3;
-	msgCAN3.id = 0x0CAD131E;
-	msgCAN3.flags.extended = true;
+	msgCAN3.id = 0x253;
+	msgCAN3.flags.extended = false;
 	msgCAN3.len = 8;
-	msgCAN3.buf[0] = lowByte(setCurve);
-	msgCAN3.buf[1] = highByte(setCurve);
-	if (Autosteer_running)
-		msgCAN3.buf[2] = 253;
+	msgCAN3.buf[0] = 0;
+	msgCAN3.buf[1] = 0;
+	msgCAN3.buf[2] = 0;
 	msgCAN3.buf[3] = 0;
 	msgCAN3.buf[4] = 0;
 	msgCAN3.buf[5] = 0;
@@ -99,8 +96,6 @@ void can3Send()
 	can3.write(msgCAN3);
 }
 
-//---Receive can3 message
-
 void can3Receive()
 {
 	CAN_message_t can3ReceiveData;
@@ -108,11 +103,18 @@ void can3Receive()
 	{
 		if (can3ReceiveData.id == 0x253 && !Autosteer_running) {
 			// nothing to do here, bridge only
+			if (can3ReceiveData.buf[7] & 4) // but do update this. Not that it'll change once up and running, but we do need to take care of it
+				moduleRev = moduleRevision::New;
+			else
+				moduleRev = moduleRevision::Old;
 			can2.write(can3ReceiveData);
 		}
-		else if (can3ReceiveData.id == 0xCFF1401) {
-			hmsEngaged = can3ReceiveData.buf[0] & 1;
+		else if (can3ReceiveData.id == 0x18FF7C02) {
+			flowControl = can3ReceiveData.buf[7];
+			flowControlHMS = can3ReceiveData.buf[6];
 		}
+		else if (can3ReceiveData.id == 0xCFF1401)
+			hmsEngaged = can3ReceiveData.buf[0] & 1;
 		else if (can3ReceiveData.id == 0x18FF8902) {
 			if (can3ReceiveData.buf[4] & 1)
 				joystickSteerDirection = JoystickSteerDirection::UpDown;
@@ -137,6 +139,26 @@ void can3Receive()
 				Serial.print(can3ReceiveData.buf[i], HEX);
 				Serial.print(", ");
 			}
+			if (can3ReceiveData.id == 0x253 && can3ReceiveData.buf[6] <= 8) {
+				switch (can3ReceiveData.buf[6]) {
+				case 1:
+					Serial.print("Joy2 Up,");
+					break;
+				case 2:
+					Serial.print("Joy2 Down,");
+					break;
+				case 4:
+					Serial.print("Joy2 Left,");
+					break;
+				case 8:
+					Serial.print("Joy2 Right,");
+					break;
+				}
+				if (joystickSteerDirection == JoystickSteerDirection::UpDown)
+					Serial.print(", SteerUD,");
+				else
+					Serial.print(", SteerLR,");
+			}
 			if (can3ReceiveData.id == 0xCFF0501) {
 				Serial.print(" angle: ");
 				Serial.print(estCurve);
@@ -144,17 +166,17 @@ void can3Receive()
 
 		}
 	}
-} // can3receivedata
+}
 
-//---Receive can2 message
 void can2Receive()
 {
 	CAN_message_t can2ReceiveData;
 	if (can2.read(can2ReceiveData))
 	{
 		Time = millis();
-		// read and throw?
+		// read and forward
 		can3.write(can2ReceiveData);
+#pragma region Commented
 		// acting as one-half the bridge, let's not echo
 		//unsigned long PGN;
 		//byte priority;
@@ -189,9 +211,10 @@ void can2Receive()
 		//	}
 		//	Serial.println("");
 		//} // End Show Data
+#pragma endregion
 	}
 }
-
+#pragma region Commented
 ////---Receive can1 message
 //void can1Receive()
 //{
@@ -222,60 +245,5 @@ void can2Receive()
 //		} // End Show Data
 //	}
 //}
+#pragma endregion
 
-// AgOpen CAN module
-void canConfig()
-{
-
-	CAN_message_t config251;
-	config251.id = 0x19EF131C;
-	config251.flags.extended = true;
-	config251.len = 8;
-	config251.buf[0] = 251;
-	config251.buf[1] = uint8_t(steerSettings.wasOffset);
-	config251.buf[2] = uint8_t(steerSettings.wasOffset >> 8);
-	uint8_t sett0 = 0;
-	if (steerConfig.InvertWAS == 1)
-		bitSet(sett0, 0);
-	if (steerConfig.IsRelayActiveHigh == 1)
-		bitSet(sett0, 1);
-	if (steerConfig.MotorDriveDirection == 1)
-		bitSet(sett0, 2);
-	if (steerConfig.SingleInputWAS == 1)
-		bitSet(sett0, 3);
-	if (steerConfig.CytronDriver == 1)
-		bitSet(sett0, 4);
-	if (steerConfig.SteerSwitch == 1)
-		bitSet(sett0, 5);
-	if (steerConfig.SteerButton == 1)
-		bitSet(sett0, 6);
-	if (steerConfig.ShaftEncoder == 1)
-		bitSet(sett0, 7);
-	config251.buf[3] = sett0;
-	config251.buf[4] = steerConfig.PulseCountMax;
-	uint8_t sett1 = 0;
-	if (steerConfig.IsDanfoss == 1)
-		bitSet(sett1, 0);
-	if (steerConfig.PressureSensor == 1)
-		bitSet(sett1, 1);
-	if (steerConfig.CurrentSensor == 1)
-		bitSet(sett1, 2);
-	config251.buf[5] = sett1;
-	config251.buf[6] = 0;
-	config251.buf[7] = 0;
-	can3.write(config251);
-
-	CAN_message_t config252;
-	config252.id = 0x19EF131C;
-	config252.flags.extended = true;
-	config252.len = 8;
-	config252.buf[0] = 252;
-	config252.buf[1] = uint8_t(steerSettings.Kp);
-	config252.buf[2] = uint8_t(steerSettings.highPWM);
-	config252.buf[3] = uint8_t(steerSettings.lowPWM);
-	config252.buf[4] = uint8_t(steerSettings.minPWM);
-	config252.buf[5] = uint8_t(steerSettings.steerSensorCounts);
-	config252.buf[6] = uint8_t(steerSettings.AckermanFix * 100);
-	config252.buf[7] = 0;
-	can3.write(config252);
-}

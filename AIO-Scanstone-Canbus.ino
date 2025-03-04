@@ -22,35 +22,30 @@ enum JoystickSteerDirection
 };
 JoystickSteerDirection joystickSteerDirection = JoystickSteerDirection::LeftRight;
 
+enum moduleRevision
+{
+	New = 0,
+	Old = 1
+};
+moduleRevision moduleRev = moduleRevision::New;
+
+int flowControl = 0;
+int flowControlHMS = 0;
+
+
+
+
+
 String inoVersion = ("\r\nAgOpenGPS Tony UDP CANBUS Ver 05.03.2023");
-////////////////// User Settings /////////////////////////  
 
 //How many degrees before decreasing Max PWM
 #define LOW_HIGH_DEGREES 3.0
 
-/*  PWM Frequency ->
- *   490hz (default) = 0
- *   122hz = 1
- *   3921hz = 2
- */
-#define PWM_Frequency 0
 
  /////////////////////////////////////////////
 
  // if not in eeprom, overwrite 
 #define EEP_Ident 0x5422
-
-//   ***********  Motor drive connections  **************888
-//Connect ground only for cytron, Connect Ground and +5v for IBT2
-
-//Dir1 for Cytron Dir, Both L and R enable for IBT2
-#define DIR1_RL_ENABLE  4  //PD4
-
-//PWM1 for Cytron PWM, Left PWM for IBT2
-#define PWM1_LPWM  3  //PD3
-
-//Not Connected for Cytron, Right PWM for IBT2
-#define PWM2_RPWM  9 //D9
 
 //--------------------------- Switch Input Pins ------------------------
 #define STEERSW_PIN 6 //PD6
@@ -109,9 +104,9 @@ EthernetUDP NtripUdp;
 //----Teensy 4.1 CANBus--Start---------------------
 
 #include <FlexCAN_T4.h>
-FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_256> can1;    //Tractor / Control Bus
-FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_256> can2;  //ISO Bus
-FlexCAN_T4<CAN3, RX_SIZE_256, TX_SIZE_256> can3;    //Steering Valve Bus
+FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_256> can1;
+FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_256> can2;
+FlexCAN_T4<CAN3, RX_SIZE_256, TX_SIZE_256> can3;
 
 
 #define ledPin 5        //Option for LED, CAN Valve Ready To Steer.
@@ -122,17 +117,12 @@ uint8_t Brand = 0;              //Variable to set brand via serial monitor.
 uint8_t gpsMode = 4;            //Variable to set GPS mode via serial monitor.
 uint8_t CANBUS_ModuleID = 0x1C; //Used for the Module CAN ID
 
-bool reverse_MT = 0;
-
 uint32_t Time;                  //Time Arduino has been running
 uint32_t relayTime;             //Time to keep "Button Pressed" from CAN Message
 boolean engageCAN = 0;          //Variable for Engage from CAN
 boolean workCAN = 0;            //Variable for Workswitch from CAN
 boolean Service = 0;            //Variable for Danfoss Service Tool Mode
 boolean ShowCANData = 1;        //Variable for Showing CAN Data
-
-boolean goDown = false, endDown = false, bitState = false, bitStateOld = false;  //CAN Hitch Control
-byte hydLift = 0;
 
 uint16_t setCurve = 32128;       //Variable for Set Curve to CAN
 uint16_t estCurve = 32128;       //Variable for WAS from CAN
@@ -226,10 +216,6 @@ uint8_t currentReading;
 //EEPROM
 int16_t EEread = 0;
 
-//Relays
-bool isRelayActiveHigh = true;
-uint8_t relay = 0, relayHi = 0, uTurn = 0;
-uint8_t tram = 0;
 
 //Switches
 uint8_t remoteSwitch = 0, workSwitch = 0, steerSwitch = 1, switchByte = 0;
@@ -315,10 +301,8 @@ void setup()
 	pinMode(WORKSW_PIN, INPUT_PULLUP);
 	pinMode(STEERSW_PIN, INPUT_PULLUP);
 	pinMode(REMOTE_PIN, INPUT_PULLUP);
-	pinMode(DIR1_RL_ENABLE, OUTPUT);
 	pinMode(13, OUTPUT);
 
-	pinMode(PWM2_RPWM, OUTPUT);
 
 	//set up communication
 	Wire.begin();
@@ -531,10 +515,6 @@ void loop()
 		{
 			//we've lost the comm to AgOpenGPS, or just stop request
 			//****** If CAN engage is ON (1), don't turn off saftey valve ******
-			if (engageCAN == 0)
-			{
-				digitalWrite(PWM2_RPWM, 0);
-			}
 
 			intendToSteer = 0; //CAN Curve NOT Inteeded for Steering   
 			if (Brand != 7)
@@ -589,16 +569,8 @@ void loop()
 
 	//--CAN--End-----
 
-	//**GPS**
-	if (useBNO08x)
-	{
-		Read_IMU();
-	}
-	else
-	{
-		//RVC BNO08x
-		if (rvc.read(&bnoData)) useBNO08xRVC = true;
-	}
+	//RVC BNO08x
+	if (rvc.read(&bnoData)) useBNO08xRVC = true;
 
 	if (useBNO08xRVC && bnoTimer > 40 && bnoTrigger)
 	{
@@ -607,20 +579,15 @@ void loop()
 	}
 
 	if (gpsMode == 1 || gpsMode == 2)
-	{
 		Forward_GPS();
-	}
 	else
-	{
 		Panda_GPS();
-	}
 
 	Forward_Ntrip();
 
 	//Check for UDP Packet
 	int packetSize = Udp.parsePacket();
 	if (packetSize) {
-		//Serial.println("UDP Data Avalible"); 
 		udpSteerRecv(packetSize);
 	}
 
@@ -646,7 +613,7 @@ void udpSteerRecv(int sizeToRead)
 
 	if (udpData[0] == 0x80 && udpData[1] == 0x81 && udpData[2] == 0x7F) //Data
 	{
-		if (udpData[3] == 0xFE)  //254
+		if (udpData[3] == 0xFE)  //254 // the ALL IMPORTANT steer data !!
 		{
 			gpsSpeed = ((float)(udpData[5] | udpData[6] << 8)) * 0.1;
 
@@ -669,15 +636,6 @@ void udpSteerRecv(int sizeToRead)
 			{
 				watchdogTimer = 0;  //reset watchdog
 			}
-
-			//Bit 10 Tram 
-			tram = udpData[10];
-
-			//Bit 11
-			relay = udpData[11];
-
-			//Bit 12
-			relayHi = udpData[12];
 
 			//----------------------------------------------------------------------------
 			//Serial Send to agopenGPS
@@ -768,41 +726,8 @@ void udpSteerRecv(int sizeToRead)
 
 		}
 
-		//Machine Data
-		else if (udpData[3] == 0xEF)  //239 Machine Data
-		{
-			hydLift = udpData[7];
-
-			//reset for next pgn sentence
-			isHeaderFound = isPGNFound = false;
-			pgn = dataLength = 0;
-		}
-
-		//Machine Settings
-		else if (udpData[3] == 0xEE) //238 Machine Settings 
-		{
-			aogConfig.raiseTime = udpData[5];
-			aogConfig.lowerTime = udpData[6];
-			//aogConfig.enableToolLift = udpData[7]; //This is wrong AgOpen is putting enable in sett,1
-
-			//set1 
-			uint8_t sett = udpData[8];  //setting0     
-			if (bitRead(sett, 0)) aogConfig.isRelayActiveHigh = 1; else aogConfig.isRelayActiveHigh = 0;
-			if (bitRead(sett, 1)) aogConfig.enableToolLift = 1; else aogConfig.enableToolLift = 0;
-
-			//crc
-			//udpData[13];        //crc
-
-			//save in EEPROM and restart
-			EEPROM.put(6, aogConfig);
-
-			//reset for next pgn sentence
-			isHeaderFound = isPGNFound = false;
-			pgn = dataLength = 0;
-		}
-
 		// Tool Steer
-		else if (udpData[3] == 0xE9 && Autosteer_running)  //233
+		else if (udpData[3] == 0xE9 && Autosteer_running)  //233   SCANSTONE
 		{
 			int16_t temp_int16;
 
@@ -887,9 +812,6 @@ void udpSteerRecv(int sizeToRead)
 			//store in EEPROM
 			EEPROM.put(10, steerSettings);
 
-			//Send Config Via CAN
-			if (Brand == 7) canConfig();
-
 			// for PWM High to Low interpolator
 			highLowPerDeg = ((float)(steerSettings.highPWM - steerSettings.lowPWM)) / LOW_HIGH_DEGREES;
 		}
@@ -923,9 +845,6 @@ void udpSteerRecv(int sizeToRead)
 			//udpData[13];        
 
 			EEPROM.put(40, steerConfig);
-
-			//Send Config Via CAN
-			if (Brand == 7) canConfig();
 
 			//reset for next pgn sentence
 			isHeaderFound = isPGNFound = false;

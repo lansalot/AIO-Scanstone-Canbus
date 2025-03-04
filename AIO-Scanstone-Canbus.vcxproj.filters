@@ -17,7 +17,6 @@
   <ItemGroup>
     <ClCompile Include="AIO-Scanstone-Canbus.ino" />
     <ClCompile Include="AutosteerPID.ino" />
-    <ClCompile Include="AutosteerRelays.ino" />
     <ClCompile Include="BNO_RVC.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
