@@ -14,6 +14,12 @@ int16_t integralCounter = 0;
 float pivotDerivative = 0;
 bool Autosteer_running = true; //Auto set off in autosteer setup
 
+enum JoystickSteerDirection
+{
+	UpDown = 0,
+	LeftRight = 1
+};
+JoystickSteerDirection joystickSteerDirection = JoystickSteerDirection::LeftRight;
 
 /*
  * UDP Autosteer code for Teensy 4.1

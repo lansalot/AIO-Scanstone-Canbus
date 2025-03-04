@@ -1,16 +1,17 @@
+
+
 void CAN_setup(void)
 {
-	// can3 is the bus we find the steering on
+	// can3 is the bus we find the steering on, and it will act as one side of the bridge to can2
 	can3.begin();
 	can3.setBaudRate(250000);
 	can3.enableFIFO();
 	// low volume, can we handle it all?
+	// will have to if it's acting as a bridge
 	// can3.setFIFOFilter(REJECT_ALL);
 	if (Brand != 0)
 	{
-		can3.setFIFOFilter(0, 0x0CAC1E13, EXT); // Claas Curve Data & Valve State Message
-		can3.setFIFOFilter(1, 0x18EF1CD2, EXT); // Claas Engage Message
-		can3.setFIFOFilter(2, 0x1CFFE6D2, EXT); // Claas Work Message (CEBIS Screen MR Models)
+		can3.setFIFOFilter(0, 0xCFF0501, EXT); // Claas Curve Data & Valve State Message
 		CANBUS_ModuleID = 0x1E;
 	}
 
@@ -78,25 +79,23 @@ void CAN_setup(void)
 
 void can3Send()
 {
-	CAN_message_t msgCAN3;
-	if (Brand == 0)
-	{
-		msgCAN3.id = 0x0CAD131E;
-		msgCAN3.flags.extended = true;
-		msgCAN3.len = 8;
-		msgCAN3.buf[0] = lowByte(setCurve);
-		msgCAN3.buf[1] = highByte(setCurve);
-		if (intendToSteer == 1)
-			msgCAN3.buf[2] = 253;
-		if (intendToSteer == 0)
-			msgCAN3.buf[2] = 252;
-		msgCAN3.buf[3] = 0;
-		msgCAN3.buf[4] = 0;
-		msgCAN3.buf[5] = 0;
-		msgCAN3.buf[6] = 0;
-		msgCAN3.buf[7] = 0;
-		can3.write(msgCAN3);
+	if (Autosteer_running) {
+		if ()
 	}
+	CAN_message_t msgCAN3;
+	msgCAN3.id = 0x0CAD131E;
+	msgCAN3.flags.extended = true;
+	msgCAN3.len = 8;
+	msgCAN3.buf[0] = lowByte(setCurve);
+	msgCAN3.buf[1] = highByte(setCurve);
+	if (Autosteer_running == 1)
+		msgCAN3.buf[2] = 253;
+	msgCAN3.buf[3] = 0;
+	msgCAN3.buf[4] = 0;
+	msgCAN3.buf[5] = 0;
+	msgCAN3.buf[6] = 0;
+	msgCAN3.buf[7] = 0;
+	can3.write(msgCAN3);
 }
 
 //---Receive can3 message
@@ -106,24 +105,22 @@ void can3Receive()
 	CAN_message_t can3ReceiveData;
 	if (can3.read(can3ReceiveData))
 	{
-
-		if (Brand == 0)
+		if (can3ReceiveData.id == 0x018FF8902) {
+			if (can3ReceiveData.buf[4] == 0)
+				joystickSteerDirection = JoystickSteerDirection::LeftRight;
+			else
+				joystickSteerDirection = JoystickSteerDirection::UpDown;
+		}
+		if (can3ReceiveData.id == 0x253 && !Autosteer_running) {
+			can2.write(can3ReceiveData);
+		}
+		if (can3ReceiveData.id == 0xCFF0501)
 		{
-			//**Current Wheel Angle & Valve State**
-			if (can3ReceiveData.id == 0x0CAC1E13)
-			{
-				engageCAN = bitRead(can3ReceiveData.buf[0], 2);
-				estCurve = ((can3ReceiveData.buf[1] << 8) + can3ReceiveData.buf[0]); // CAN Buf[1]*256 + CAN Buf[0] = CAN Est Curve
-				steeringValveReady = (can3ReceiveData.buf[2]);
-				Time = millis();
-
-				digitalWrite(engageLED, HIGH);
-				relayTime = ((millis() + 1000));
-
-			}
-		} // End Brand == 0
-
-
+			estCurve = (can3ReceiveData.buf[0]); // Until clarity on Angle/256 means - decimal perhaps?
+			Time = millis();
+			digitalWrite(engageLED, HIGH);
+			relayTime = ((millis() + 1000));
+		}
 		if (ShowCANData == 1)
 		{
 			Serial.print(Time);
@@ -135,29 +132,14 @@ void can3Receive()
 				Serial.print(can3ReceiveData.buf[i], HEX);
 				Serial.print(", ");
 			}
-			if (can3ReceiveData.id == 0x0CACFFF0) {
-				Serial.print(" crv: ");
+			if (can3ReceiveData.id == 0xCFF0501) {
+				Serial.print(" angle: ");
 				Serial.print(estCurve);
-				Serial.print(" mlck: ");
-				switch (steeringValveReady & 0b00000011) {
-				case 0b00:
-					Serial.print("Not active");
-					break;
-				case 0b01:
-					Serial.print("Active");
-					break;
-				case 0b10:
-					Serial.print("Error indication");
-					break;
-				case 0b11:
-					Serial.print("Not available");
-					break;
-				}
+			}
 
-			} // End if message
-		} // End Receive V-Bus Void
-	} // can3receivedata
-}
+		}
+	}
+} // can3receivedata
 
 //---Receive can2 message
 void can2Receive()
@@ -165,41 +147,43 @@ void can2Receive()
 	CAN_message_t can2ReceiveData;
 	if (can2.read(can2ReceiveData))
 	{
-		unsigned long PGN;
-		byte priority;
-		byte srcaddr;
-		byte destaddr;
 		Time = millis();
-		j1939_decode(can2ReceiveData.id, &PGN, &priority, &srcaddr, &destaddr);
-
-		if (ShowCANData == 1)
-		{
-			Serial.print(Time);
-			Serial.print(", CAN2");
-			Serial.print(", MB: ");
-			Serial.print(can2ReceiveData.mb);
-			Serial.print(", ID: 0x");
-			Serial.print(can2ReceiveData.id, HEX);
-			Serial.print(", PGN: ");
-			Serial.print(PGN);
-			Serial.print(", Priority: ");
-			Serial.print(priority);
-			Serial.print(", SA: ");
-			Serial.print(srcaddr);
-			Serial.print(", DA: ");
-			Serial.print(destaddr);
-			Serial.print(", EXT: ");
-			Serial.print(can2ReceiveData.flags.extended);
-			Serial.print(", LEN: ");
-			Serial.print(can2ReceiveData.len);
-			Serial.print(", DATA: ");
-			for (uint8_t i = 0; i < 8; i++)
-			{
-				Serial.print(can2ReceiveData.buf[i]);
-				Serial.print(", ");
-			}
-			Serial.println("");
-		} // End Show Data
+		// read and throw?
+		can3.write(can2ReceiveData);
+		// acting as one-half the bridge, let's not echo
+		//unsigned long PGN;
+		//byte priority;
+		//byte srcaddr;
+		//byte destaddr;
+//		j1939_decode(can2ReceiveData.id, &PGN, &priority, &srcaddr, &destaddr);
+		//if (ShowCANData == 1)
+		//{
+		//	Serial.print(Time);
+		//	Serial.print(", CAN2");
+		//	Serial.print(", MB: ");
+		//	Serial.print(can2ReceiveData.mb);
+		//	Serial.print(", ID: 0x");
+		//	Serial.print(can2ReceiveData.id, HEX);
+		//	Serial.print(", PGN: ");
+		//	Serial.print(PGN);
+		//	Serial.print(", Priority: ");
+		//	Serial.print(priority);
+		//	Serial.print(", SA: ");
+		//	Serial.print(srcaddr);
+		//	Serial.print(", DA: ");
+		//	Serial.print(destaddr);
+		//	Serial.print(", EXT: ");
+		//	Serial.print(can2ReceiveData.flags.extended);
+		//	Serial.print(", LEN: ");
+		//	Serial.print(can2ReceiveData.len);
+		//	Serial.print(", DATA: ");
+		//	for (uint8_t i = 0; i < 8; i++)
+		//	{
+		//		Serial.print(can2ReceiveData.buf[i]);
+		//		Serial.print(", ");
+		//	}
+		//	Serial.println("");
+		//} // End Show Data
 	}
 }
 
