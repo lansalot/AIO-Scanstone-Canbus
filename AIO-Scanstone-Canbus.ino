@@ -107,10 +107,31 @@ unsigned int AOGPort = 9999;
 //MAC address
 byte mac[] = { 0x00,0x00,0x56,0x00,0x00,0x7E };
 
+enum PGNs {
+	SteerData = 0xFE,
+	AgIOHello = 0xC8,
+	Destoner = 0xE9,
+	MachineData = 0xEF,
+	MachineSettings = 0xEE,
+	SteerConfig = 0xFB,
+	SteerSettings = 0xFC,
+	SubnetRequest = 0xCA,
+	SubnetChange = 0xC9
+};
+
 // Buffer For Receiving UDP Data
-byte udpData[512];    // Incoming Buffer
-byte AOGID1 = 0x80;
-byte AOGID2 = 0x81;
+union _udpPacket {
+	byte udpData[512];    // Incoming Buffer
+	struct {
+		uint16_t AOGID;
+		byte MajorPGN;
+		byte MinorPGN;
+		byte data[508];
+	};
+};;
+
+_udpPacket udpPacket;
+
 byte NtripData[512];
 
 // An EthernetUDP instance to let us send and receive packets over UDP
@@ -703,19 +724,19 @@ void udpSteerRecv(int sizeToRead)
 {
 	if (sizeToRead > 128) sizeToRead = 128;
 	IPAddress src_ip = Udp.remoteIP();
-	Udp.read(udpData, sizeToRead);
+	Udp.read(udpPacket.udpData, sizeToRead);
 
-	if (udpData[0] == 0x80 && udpData[1] == 0x81 && udpData[2] == 0x7F) //Data
+	if (udpPacket.AOGID == 0x8180 && udpPacket.MajorPGN == 0x7F) //Data
 	{
-		if (udpData[3] == 0xFE)  //254 // the ALL IMPORTANT steer data !!
+		if (udpPacket.MinorPGN == PGNs::SteerData)  //254 // the ALL IMPORTANT steer data !!
 		{
 			Serial.println("steer!");
-			gpsSpeed = ((float)(udpData[5] | udpData[6] << 8)) * 0.1;
+			gpsSpeed = ((float)(udpPacket.udpData[5] | udpPacket.udpData[6] << 8)) * 0.1;
 
-			guidanceStatus = udpData[7];
+			guidanceStatus = udpPacket.udpData[7];
 
 			//Bit 8,9    set point steer angle * 100 is sent
-			steerAngleSetPoint = ((float)(udpData[8] | ((int8_t)udpData[9]) << 8)) * 0.01; //high low bytes
+			steerAngleSetPoint = ((float)(udpPacket.udpData[8] | ((int8_t)udpPacket.udpData[9]) << 8)) * 0.01; //high low bytes
 
 			//Serial.println(gpsSpeed); 
 
@@ -729,13 +750,13 @@ void udpSteerRecv(int sizeToRead)
 			}
 
 			//Bit 10 Tram 
-			tram = udpData[10];
+			tram = udpPacket.udpData[10];
 
 			//Bit 11
-			relay = udpData[11];
+			relay = udpPacket.udpData[11];
 
 			//Bit 12
-			relayHi = udpData[12];
+			relayHi = udpPacket.udpData[12];
 
 			//----------------------------------------------------------------------------
 			//Serial Send to agopenGPS
@@ -802,36 +823,12 @@ void udpSteerRecv(int sizeToRead)
 			//--------------------------------------------------------------------------    
 		}
 
-		else if (udpData[3] == 0xC8) //200 Hello from AgIO
-		{
-			int16_t sa = (int16_t)(steerAngleActual * 100);
-
-			helloFromAutoSteer[5] = (uint8_t)sa;
-			helloFromAutoSteer[6] = sa >> 8;
-
-			helloFromAutoSteer[7] = (uint8_t)helloSteerPosition;
-			helloFromAutoSteer[8] = helloSteerPosition >> 8;
-			helloFromAutoSteer[9] = switchByte;
-
-
-			Udp.beginPacket(ipDestination, 9999);
-			Udp.write(helloFromAutoSteer, sizeof(helloFromAutoSteer));
-			Udp.endPacket();
-
-			if (useBNO08x || useBNO08xRVC)
-			{
-				Udp.beginPacket(ipDestination, 9999);
-				Udp.write(helloFromIMU, sizeof(helloFromIMU));
-				Udp.endPacket();
-			}
-		}
-
 		// Tool Steer
-		else if (udpData[3] == 0xE9 && Autosteer_running)  //233   SCANSTONE
+		else if (udpPacket.MinorPGN == PGNs::Destoner && Autosteer_running)  //233   SCANSTONE
 		{
 			int16_t temp_int16;
 
-			temp_int16 = (int16_t)(udpData[8] | ((int8_t)udpData[9]) << 8);
+			temp_int16 = (int16_t)(udpPacket.udpData[8] | ((int8_t)udpPacket.udpData[9]) << 8);
 			if (temp_int16 < 29000) tractorXTE = (float)temp_int16 * 0.001;
 			else tractorXTE = 0.00;
 
@@ -891,10 +888,35 @@ void udpSteerRecv(int sizeToRead)
 			Serial.println(steerAngleError, 1);
 		}
 
-		//Machine Data
-		else if (udpData[3] == 0xEF)  //239 Machine Data
+		else if (udpPacket.MinorPGN == PGNs::AgIOHello) //200 Hello from AgIO
 		{
-			hydLift = udpData[7];
+			int16_t sa = (int16_t)(steerAngleActual * 100);
+
+			helloFromAutoSteer[5] = (uint8_t)sa;
+			helloFromAutoSteer[6] = sa >> 8;
+
+			helloFromAutoSteer[7] = (uint8_t)helloSteerPosition;
+			helloFromAutoSteer[8] = helloSteerPosition >> 8;
+			helloFromAutoSteer[9] = switchByte;
+
+
+			Udp.beginPacket(ipDestination, 9999);
+			Udp.write(helloFromAutoSteer, sizeof(helloFromAutoSteer));
+			Udp.endPacket();
+
+			if (useBNO08x || useBNO08xRVC)
+			{
+				Udp.beginPacket(ipDestination, 9999);
+				Udp.write(helloFromIMU, sizeof(helloFromIMU));
+				Udp.endPacket();
+			}
+		}
+
+
+		//Machine Data
+		else if (udpPacket.MinorPGN == PGNs::MachineData)  //239 Machine Data
+		{
+			hydLift = udpPacket.udpData[7];
 
 			//reset for next pgn sentence
 			isHeaderFound = isPGNFound = false;
@@ -902,19 +924,19 @@ void udpSteerRecv(int sizeToRead)
 		}
 
 		//Machine Settings
-		else if (udpData[3] == 0xEE) //238 Machine Settings 
+		else if (udpPacket.MinorPGN == PGNs::MachineSettings) //238 Machine Settings 
 		{
-			aogConfig.raiseTime = udpData[5];
-			aogConfig.lowerTime = udpData[6];
-			//aogConfig.enableToolLift = udpData[7]; //This is wrong AgOpen is putting enable in sett,1
+			aogConfig.raiseTime = udpPacket.udpData[5];
+			aogConfig.lowerTime = udpPacket.udpData[6];
+			//aogConfig.enableToolLift = udpPacket.udpData[7]; //This is wrong AgOpen is putting enable in sett,1
 
 			//set1 
-			uint8_t sett = udpData[8];  //setting0     
+			uint8_t sett = udpPacket.udpData[8];  //setting0     
 			if (bitRead(sett, 0)) aogConfig.isRelayActiveHigh = 1; else aogConfig.isRelayActiveHigh = 0;
 			if (bitRead(sett, 1)) aogConfig.enableToolLift = 1; else aogConfig.enableToolLift = 0;
 
 			//crc
-			//udpData[13];        //crc
+			//udpPacket.udpData[13];        //crc
 
 			//save in EEPROM and restart
 			EEPROM.put(6, aogConfig);
@@ -924,27 +946,27 @@ void udpSteerRecv(int sizeToRead)
 			pgn = dataLength = 0;
 		}
 
-		else if (udpData[3] == 0xFC)  //252 steer settings
+		else if (udpPacket.MinorPGN == PGNs::SteerSettings)  //252 steer settings
 		{
 			//PID values
-			steerSettings.Kp = udpData[5];   // read Kp from AgOpenGPS
+			steerSettings.Kp = udpPacket.udpData[5];   // read Kp from AgOpenGPS
 
-			steerSettings.highPWM = udpData[6]; // read high pwm
+			steerSettings.highPWM = udpPacket.udpData[6]; // read high pwm
 
-			steerSettings.lowPWM = udpData[8]; //udpData[7];   // read lowPWM from AgOpenGPS              
+			steerSettings.lowPWM = udpPacket.udpData[8]; //udpPacket.udpData[7];   // read lowPWM from AgOpenGPS              
 
-			steerSettings.minPWM = 1; //udpData[8]; //read the minimum amount of PWM for instant on
+			steerSettings.minPWM = 1; //udpPacket.udpData[8]; //read the minimum amount of PWM for instant on
 
-			steerSettings.steerSensorCounts = udpData[9]; //sent as setting displayed in AOG
+			steerSettings.steerSensorCounts = udpPacket.udpData[9]; //sent as setting displayed in AOG
 
-			steerSettings.wasOffset = (udpData[10]);  //read was zero offset Lo
+			steerSettings.wasOffset = (udpPacket.udpData[10]);  //read was zero offset Lo
 
-			steerSettings.wasOffset |= (((int8_t)udpData[11]) << 8);  //read was zero offset Hi
+			steerSettings.wasOffset |= (((int8_t)udpPacket.udpData[11]) << 8);  //read was zero offset Hi
 
-			steerSettings.AckermanFix = (float)udpData[12] * 0.01;
+			steerSettings.AckermanFix = (float)udpPacket.udpData[12] * 0.01;
 
 			//crc
-			//udpData[13];
+			//udpPacket.udpData[13];
 
 			//store in EEPROM
 			EEPROM.put(10, steerSettings);
@@ -953,9 +975,9 @@ void udpSteerRecv(int sizeToRead)
 			highLowPerDeg = ((float)(steerSettings.highPWM - steerSettings.lowPWM)) / LOW_HIGH_DEGREES;
 		}
 
-		else if (udpData[3] == 0xFB) //251 FB - SteerConfig
+		else if (udpPacket.MinorPGN == PGNs::SteerConfig) //251 FB - SteerConfig
 		{
-			uint8_t sett = udpData[5]; //setting0
+			uint8_t sett = udpPacket.udpData[5]; //setting0
 
 			if (bitRead(sett, 0)) steerConfig.InvertWAS = 1; else steerConfig.InvertWAS = 0;
 			if (bitRead(sett, 1)) steerConfig.IsRelayActiveHigh = 1; else steerConfig.IsRelayActiveHigh = 0;
@@ -966,12 +988,12 @@ void udpSteerRecv(int sizeToRead)
 			if (bitRead(sett, 6)) steerConfig.SteerButton = 1; else steerConfig.SteerButton = 0;
 			if (bitRead(sett, 7)) steerConfig.ShaftEncoder = 1; else steerConfig.ShaftEncoder = 0;
 
-			steerConfig.PulseCountMax = udpData[6];
+			steerConfig.PulseCountMax = udpPacket.udpData[6];
 
 			//was speed
-			//udpData[7]; 
+			//udpPacket.udpData[7]; 
 
-			sett = udpData[8]; //setting1 - Danfoss valve etc
+			sett = udpPacket.udpData[8]; //setting1 - Danfoss valve etc
 
 			if (bitRead(sett, 0)) steerConfig.IsDanfoss = 1; else steerConfig.IsDanfoss = 0;
 			if (bitRead(sett, 1)) steerConfig.PressureSensor = 1; else steerConfig.PressureSensor = 0;
@@ -979,7 +1001,7 @@ void udpSteerRecv(int sizeToRead)
 			if (bitRead(sett, 3)) steerConfig.IsUseY_Axis = 1; else steerConfig.IsUseY_Axis = 0;
 
 			//crc
-			//udpData[13];        
+			//udpPacket.udpData[13];        
 
 			EEPROM.put(40, steerConfig);
 
@@ -989,14 +1011,14 @@ void udpSteerRecv(int sizeToRead)
 
 		}//end FB
 
-		else if (udpData[3] == 0xC9) // 201 Subnet change and restart
+		else if (udpPacket.MinorPGN == PGNs::SubnetChange) // 201 Subnet change and restart
 		{
 			//make really sure this is the subnet pgn
-			if (udpData[4] == 5 && udpData[5] == 201 && udpData[6] == 201)
+			if (udpPacket.udpData[4] == 5 && udpPacket.udpData[5] == 201 && udpPacket.udpData[6] == 201)
 			{
-				networkAddress.ipOne = udpData[7];
-				networkAddress.ipTwo = udpData[8];
-				networkAddress.ipThree = udpData[9];
+				networkAddress.ipOne = udpPacket.udpData[7];
+				networkAddress.ipTwo = udpPacket.udpData[8];
+				networkAddress.ipThree = udpPacket.udpData[9];
 
 				//save in EEPROM and restart
 				EEPROM.put(60, networkAddress);
@@ -1004,10 +1026,10 @@ void udpSteerRecv(int sizeToRead)
 			}
 		}//end C9
 
-		else if (udpData[3] == 0xCA) // 202 Who Am I ?
+		else if (udpPacket.MinorPGN == PGNs::SubnetRequest) // 202 Who Am I ?
 		{
 			//make really sure this is the reply pgn
-			if (udpData[4] == 3 && udpData[5] == 202 && udpData[6] == 202)
+			if (udpPacket.udpData[4] == 3 && udpPacket.udpData[5] == 202 && udpPacket.udpData[6] == 202)
 			{
 				//hello from AgIO
 				uint8_t scanReply[] = { 128, 129, 126, 203, 7,
