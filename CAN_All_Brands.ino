@@ -5,79 +5,99 @@ void CAN_setup(void)
 #ifdef debugCAN
 	Serial.println("Extra CAN debugging enabled");
 #endif
-	// can3 is the bus we find the steering on, and it will act as one side of the bridge to can2
-	can3.begin();
-	can3.setBaudRate(250000);
-	can3.enableFIFO();
-	// low volume, can we handle it all?
-	// will have to if it's acting as a bridge
-	// can3.setFIFOFilter(REJECT_ALL);
-	if (Brand != 0)
-	{
-		can3.setFIFOFilter(0, 0xCFF0501, EXT); // Claas Curve Data & Valve State Message
-		CANBUS_ModuleID = 0x1E;
-	}
 
-	// Claim can3 Address - no claiming just now, is this necessary
-	if (Brand != 0)
-	{
-		CAN_message_t msgCAN3;
-		msgCAN3.id = 0x18EEFF1E;
-		msgCAN3.flags.extended = true;
-		msgCAN3.len = 8;
-		msgCAN3.buf[0] = 0x00;
-		msgCAN3.buf[1] = 0x00;
-		msgCAN3.buf[2] = 0xC0;
-		msgCAN3.buf[3] = 0x0C;
-		msgCAN3.buf[4] = 0x00;
-		msgCAN3.buf[5] = 0x17;
-		msgCAN3.buf[6] = 0x02;
-		msgCAN3.buf[7] = 0x20;
-		can3.write(msgCAN3);
-	}
-	delay(500);
+	//Teensy FlexCAN_T4 setup
+	CAN2_Joystick.begin();
+	CAN2_Joystick.setBaudRate(250000);
+	CAN2_Joystick.setMaxMB(32);
+	CAN2_Joystick.enableFIFO();
+	CAN2_Joystick.onReceive(CAN2_Joystick_Handler);
+	CAN2_Joystick.enableFIFOInterrupt();
 
-	// can2 - use as one side of the bridge?
-	can2.begin();
-	can2.setBaudRate(250000);
-	can2.enableFIFO();
-	// can2.setFIFOFilter(REJECT_ALL); // if bridging, don't filter
-
-	if (Brand != 0)
-	{
-		// message to claim, not used as Brand > 0
-		CAN_message_t msgCAN2;
-		msgCAN2.id = 0x18EEFF1E;
-		msgCAN2.flags.extended = true;
-		msgCAN2.len = 8;
-		msgCAN2.buf[0] = 0x00;
-		msgCAN2.buf[1] = 0x00;
-		msgCAN2.buf[2] = 0xC0;
-		msgCAN2.buf[3] = 0x0C;
-		msgCAN2.buf[4] = 0x00;
-		msgCAN2.buf[5] = 0x17;
-		msgCAN2.buf[6] = 0x02;
-		msgCAN2.buf[7] = 0x20;
-		can2.write(msgCAN2);
-	}
-
-	delay(500);
-
-	// can1 - no need - we can bridge between 2 and 3
-
-	//can1.begin();
-	//can1.setBaudRate(250000);
-	//can1.enableFIFO();
-	//// can1.setFIFOFilter(REJECT_ALL); // if bridging, don't filter
-	//if (Brand == 1) // not used
-	//{
-	//	can1.setFIFOFilter(0, 0xCFF2621, EXT); // MF engage button
-	//	can1.setFIFOFilter(1, 0x203, EXT);		// MF check valve is on K-bus - not used //
-	//}
-	//delay(300);
+	CAN3_MachineECU.begin();
+	CAN3_MachineECU.setBaudRate(250000);
+	CAN3_MachineECU.setMaxMB(32);
+	CAN3_MachineECU.enableFIFO();
+	CAN3_MachineECU.onReceive(CAN3_MachineECU_Handler);
+	CAN3_MachineECU.enableFIFOInterrupt();
 
 } // End CAN SETUP
 
+//------------------------------------------------------------------------------------------------------
+
+void CAN2_Joystick_Handler(const CAN_message_t& orig_frame)
+{
+	//copy frame so we can modify it
+	CAN_message_t frame = orig_frame;
+	got_frame(frame.id, frame.flags.extended, frame.len, (BytesUnion*)frame.buf, orig_frame.bus);
+	frame.seq = 1;
+	CAN3_MachineECU.write(frame);
+}
+
+//------------------------------------------------------------------------------------------------------
+
+void CAN3_MachineECU_Handler(const CAN_message_t& orig_frame)
+{
+	//copy frame so we can modify it
+	CAN_message_t frame = orig_frame;
+	got_frame(frame.id, frame.flags.extended, frame.len, (BytesUnion*)frame.buf, orig_frame.bus);
+	frame.seq = 1;
+	CAN2_Joystick.write(frame);
+}
+
+//------------------------------------------------------------------------------------------------------
+
+void got_frame(uint32_t id, uint8_t extended, uint8_t length, BytesUnion* data, int fromBus)
+{
+	if (ShowCANData == 1 && fromBus == 2)
+	{
+		Serial.print(systick_millis_count);
+		Serial.print(", CAN2_Joystick");
+		Serial.print(", ID: 0x"); Serial.print(id, HEX);
+		Serial.print(", LEN: "); Serial.print(length);
+		Serial.print(", DATA: \t");
+		for (uint8_t i = 0; i < length; i++)
+		{
+				Serial.print(data->bytes[i], DEC);
+				Serial.print(",\t");
+		}
+		Serial.println();
+	}
+	
+	else if (ShowCANData == 1 && fromBus == 3)
+	{
+		Serial.print(systick_millis_count);
+		Serial.print(", CAN3_Machine");
+		Serial.print(", ID: 0x"); Serial.print(id, HEX);
+		Serial.print(", LEN: "); Serial.print(length);
+		Serial.print(", DATA: \t");
+		for (uint8_t i = 0; i < length; i++)
+		{
+			Serial.print(data->bytes[i], DEC);
+			Serial.print(",\t");
+		}
+		Serial.println();
+	}
+
+	// Read and/or modfiy messages as needed here
+	// 
+	// From Joystick Side (CAN 2)
+	if (fromBus == 2)
+	{
+
+	}
+
+	// From Machine ECU Side (CAN 3)
+	else if (fromBus == 3)
+	{
+
+	}
+
+}
+
+
+
+/*
 //---Send can3 message
 
 void can3Send()
@@ -271,3 +291,4 @@ void can2Receive()
 //}
 #pragma endregion
 
+*/

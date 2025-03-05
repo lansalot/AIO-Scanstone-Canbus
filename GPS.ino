@@ -24,7 +24,8 @@ int test = 0;
 
 void GPS_setup()
 {
-	GPS.begin(460800);
+	if (gpsMode == 1 || gpsMode == 3)  GPS.begin(115200);
+	else GPS.begin(460800);
 	GPS.addMemoryForRead(rxbuffer, 512);
 	GPS.addMemoryForWrite(txbuffer, 512);
 
