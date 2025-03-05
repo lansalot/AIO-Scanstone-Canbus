@@ -134,6 +134,7 @@ FlexCAN_T4<CAN3, RX_SIZE_1024, TX_SIZE_1024> CAN3_MachineECU;
 #else
 #define ledPin 5        //Option for LED, CAN Valve Ready To Steer.
 #define engageLED 24    //Option for LED, to see if Engage message is recived.
+#define steeringLED 9    //Option for LED, to see if Engage message is recived.
 #endif
 
 uint8_t gpsMode = 4;
@@ -425,6 +426,9 @@ void setup()
 
 	pinMode(engageLED, OUTPUT);  //CAN engage LED
 	digitalWrite(engageLED, LOW);
+
+	pinMode(steeringLED, OUTPUT);  //Steering LED
+	digitalWrite(steeringLED, LOW);
 #endif
 
 	Serial.println("\r\nStarting CAN-Bus Ports");
@@ -597,12 +601,19 @@ void loop()
 		mappedWAS = multiMap<float>(steerAngleActual, inputWAS, outputWAS, 21);
 		steerAngleActual = mappedWAS;
 
+		if (useToolSteer) steerAngleError = steerAngleActual - toolSteerAngleSetPoint;   //calculate the steering error
+		else steerAngleError = steerAngleActual - steerAngleSetPoint;   //calculate the steering error
+
 		if (watchdogTimer < WATCHDOG_THRESHOLD)
 		{
-			if (useToolSteer) steerAngleError = steerAngleActual - toolSteerAngleSetPoint;   //calculate the steering error
-			else steerAngleError = steerAngleActual - steerAngleSetPoint;   //calculate the steering error
+#ifdef isAllInOneBoard
 
-			calcSteeringPID(); //do the pid
+#else
+			//We are good to steer
+			digitalWrite(steeringLED, 1);
+#endif
+
+			//calcSteeringPID(); //do the pid
 			intendToSteer = 1; //CAN Curve Inteeded for Steering
 		}
 		else
@@ -613,6 +624,12 @@ void loop()
 			intendToSteer = 0; //CAN Curve NOT Inteeded for Steering   
 			pwmDrive = 0; //turn off steering motor
 			pulseCount = 0;
+#ifdef isAllInOneBoard
+
+#else
+			//We are good to steer
+			digitalWrite(steeringLED, 0);
+#endif
 		}
 
 		//-------CAN Set Curve ---------------
@@ -822,7 +839,7 @@ void udpSteerRecv(int sizeToRead)
 			if (temp_int16 < 29000) tractorXTE = (float)temp_int16 * 0.001;
 			else tractorXTE = 0.00;
 
-			Serial.print("Tractor XTE = ");
+			Serial.print("XTE = ");
 			Serial.print(tractorXTE, 3);
 
 			//integral slider is set to 0
@@ -862,15 +879,20 @@ void udpSteerRecv(int sizeToRead)
 			}
 			else integral = 0;
 
-			Serial.print("\tIntegral = ");
+			Serial.print("\tInt = ");
 			Serial.print(integral, 3);
 
 			toolSteerAngleSetPoint = (tractorXTE + -integral) * -20;
 			if (toolSteerAngleSetPoint > 20.0) toolSteerAngleSetPoint = 20.0;
 			else if (toolSteerAngleSetPoint < -20.0) toolSteerAngleSetPoint = -20.0;
 
-			Serial.print("\tSetpoint = ");
+			Serial.print("\tSet = ");
 			Serial.println(toolSteerAngleSetPoint, 1);
+
+			Serial.print("Act = ");
+			Serial.print(steerAngleActual, 1);
+			Serial.print("\tErr = ");
+			Serial.println(steerAngleError, 1);
 		}
 
 		//Machine Data

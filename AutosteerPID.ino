@@ -24,8 +24,4 @@ void calcSteeringPID(void)
 	if (pwmDrive < -newMax) pwmDrive = -newMax;
 
 	if (steerConfig.MotorDriveDirection) pwmDrive *= -1;
-
-	setCurve = (setCurve - pwmDrive);
-	pwmDisplay = pwmDrive;
-
 }
