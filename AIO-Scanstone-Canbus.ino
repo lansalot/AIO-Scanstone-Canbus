@@ -730,7 +730,6 @@ void udpSteerRecv(int sizeToRead)
 	{
 		if (udpPacket.MinorPGN == PGNs::SteerData)  //254 // the ALL IMPORTANT steer data !!
 		{
-			Serial.println("steer!");
 			gpsSpeed = ((float)(udpPacket.udpData[5] | udpPacket.udpData[6] << 8)) * 0.1;
 
 			guidanceStatus = udpPacket.udpData[7];
