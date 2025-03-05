@@ -114,29 +114,6 @@ void GGA_Handler() //Rec'd GGA
         itoa(65535, imuHeading, 10);       //65535 is max value to stop AgOpen using IMU in Panda
         BuildNmea();
     }
-    /*
-    Serial.println(utcTime,1);
-    Serial.println(geoidalGGA, 2);
-    Serial.println(fixTypeGGA);
-    Serial.println(satsGGA);
-    Serial.println(hdopGGA,2);
-    Serial.println(rtkAgeGGA, 1);
-    Serial.println("...........");
-    */
-
-    static int GPS_1hz = 0;
-
-    if (sendGPStocan2)
-    {
-        if (GPS_1hz > 9)
-        {
-            GPS_1hz = 0;
-            sendcan2_129029();
-        }
-
-        GPS_1hz++;
-    }
-
 }
 
 void VTG_Handler()
@@ -146,13 +123,6 @@ void VTG_Handler()
 
     // vtg Speed knots
     parser.getArg(4, speedKnots);
-
-
-}
-
-void ZDA_Handler()
-{
-
 }
 
 void imuHandler()
@@ -202,11 +172,6 @@ void imuHandler()
             itoa(bnoData.pitchX10, imuRoll, 10);
         }
 
-        //Serial.print(rvc.angCounter);
-        //Serial.print(", ");
-        //Serial.print(bnoData.angVel);
-        //Serial.print(", ");
-        // YawRate
         if (rvc.angCounter > 0)
         {
             angVel = ((float)bnoData.angVel) / (float)rvc.angCounter;
@@ -287,13 +252,11 @@ void BuildNmea(void)
 
     strcat(nmea, "\r\n");
 
-
     //off to AOG
     int len = strlen(nmea);
     Udp.beginPacket(ipDestination, 9999);
     Udp.write(nmea, len);
     Udp.endPacket();
-
 }
 
 void CalculateChecksum(void)

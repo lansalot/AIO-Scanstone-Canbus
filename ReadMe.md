@@ -4,7 +4,7 @@
 
 Remove the // characters to change it to
 
-`// #define isAllInOneBoard`
+`#define isAllInOneBoard`
 
 
 If you're using the code with Tony's board, leave the // characters in place

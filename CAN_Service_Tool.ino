@@ -8,7 +8,6 @@ void Service_Tool (void)
   
   while (Service == 1) 
   {
-  
       if (Serial.available())   // Read Data From Serail Monitor 
       {    
         byte b = Serial.read();
@@ -42,12 +41,12 @@ void Service_Tool (void)
           Serial.print(temp, 2);
           Serial.println(" degC CPU Temp");
       }
-
   }
 }
 
 //**************************************************************************************
-void Help(){
+void Help()
+{
   Serial.println("? = Help");
   Serial.println("X = Exit Service Mode");
   Serial.println("0 = Set Brand as ScanStone");
@@ -59,7 +58,8 @@ void Help(){
 }
 
 //**************************************************************************************
-void ScanStone(){
+void ScanStone()
+{
   EEPROM.update(70,0); 
   Brand = EEPROM.read(70);
   Serial.println("Brand Set ScanStone, Restarting Teensy");
@@ -68,19 +68,22 @@ void ScanStone(){
   Serial.println(" ");
 }
 //**************************************************************************************
-void ReadCAN(){
+void ReadCAN()
+{
 ShowCANData = 1;
   Serial.println("CAN Data ON, Send X To Exit Service Tool");
   Serial.println(" ");
 }
 //**************************************************************************************
-void StopCAN(){
+void StopCAN()
+{
 ShowCANData = 0;
   Serial.println("CAN Data OFF, Send X To Exit Service Tool");
   Serial.println(" ");
 }
 //**************************************************************************************
-void gpsModeOne() {
+void gpsModeOne()
+{
     EEPROM.update(72, 1);
     Serial.println("GPS Forwarding @ 115200, Restarting Teensy");
     delay(1000);
@@ -88,7 +91,8 @@ void gpsModeOne() {
     Serial.println(" ");
 }
 //**************************************************************************************
-void gpsModeTwo() {
+void gpsModeTwo()
+{
     EEPROM.update(72, 2);
     Serial.println("GPS Forwarding @ 460800, Restarting Teensy");
     delay(1000);
@@ -96,7 +100,8 @@ void gpsModeTwo() {
     Serial.println(" ");
 }
 //**************************************************************************************
-void gpsModeThree() {
+void gpsModeThree()
+{
     EEPROM.update(72, 3);
     Serial.println("GPS Panda @ 115200, Restarting Teensy");
     delay(1000);
@@ -104,7 +109,8 @@ void gpsModeThree() {
     Serial.println(" ");
 }
 //**************************************************************************************
-void gpsModeFour() {
+void gpsModeFour()
+{
     EEPROM.update(72, 4);
     Serial.println("GPS Panda @ 460800, Restarting Teensy");
     delay(1000);

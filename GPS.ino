@@ -32,15 +32,12 @@ void GPS_setup()
 	parser.setErrorHandler(errorHandler);
 	parser.addHandler("G-GGA", GGA_Handler);
 	parser.addHandler("G-VTG", VTG_Handler);
-	parser.addHandler("G-ZDA", ZDA_Handler);
-
 }
 
 //**************************************************************
 
 void Read_IMU()
 {
-
 	//Gyro Timmed loop
 	IMU_currentTime = millis();
 
@@ -172,5 +169,3 @@ void clearBufferArray()
 	stringComplete = false;
 
 }
-
-
