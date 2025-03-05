@@ -5,3 +5,4 @@
 /.vs/**
 /__vm/
 *.vcxproj
+/AIO-Scanstone-Canbus.vcxproj
