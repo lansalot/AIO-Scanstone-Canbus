@@ -17,36 +17,33 @@
   <ItemGroup>
     <ClCompile Include="AIO-Scanstone-Canbus.ino" />
     <ClCompile Include="AutosteerPID.ino" />
+    <ClCompile Include="BNO08x_AOG.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BNO08x_AOG.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
     <ClCompile Include="BNO_RVC.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BNO08x_AOG.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="BNO_RVC.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="canframe.h">
+      <Filter>Header Files</Filter>
     </ClCompile>
     <ClCompile Include="CAN_All_Brands.ino" />
     <ClCompile Include="CAN_Service_Tool.ino" />
     <ClCompile Include="GPS.ino" />
     <ClCompile Include="j1939.ino" />
     <ClCompile Include="zHandlers.ino" />
+    <ClCompile Include="zNMEAParser.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.AIO-Scanstone-Canbus.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BNO_RVC.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="BNO08x_AOG.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="canframe.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="zNMEAParser.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="ReadMe.md" />
   </ItemGroup>
 </Project>
