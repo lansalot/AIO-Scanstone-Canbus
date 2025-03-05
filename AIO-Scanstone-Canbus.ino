@@ -583,10 +583,11 @@ void loop()
 
 		//DETERMINE ACTUAL STEERING POSITION  *********From CAN-Bus************
 
-		// TODO Sort out the steering curve here
+
 		if (intendToSteer == 0) setCurve = estCurve;  //Not steering so setCurve = estCurve
 
-		else steerAngleActual = (float)(steeringPosition) / steerSettings.steerSensorCounts;
+		steeringPosition = (setCurve - 32128 + steerSettings.wasOffset);
+		steerAngleActual = (float)(steeringPosition) / (steerSettings.steerSensorCounts * 10);  // x10 for full 16bit range, not sure if needed
 
 		//Ackerman fix
 		if (steerAngleActual < 0) steerAngleActual = (steerAngleActual * steerSettings.AckermanFix);

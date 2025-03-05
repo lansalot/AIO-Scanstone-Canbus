@@ -84,13 +84,19 @@ void got_frame(uint32_t id, uint8_t extended, uint8_t length, BytesUnion* data, 
 	// From Joystick Side (CAN 2)
 	if (fromBus == 2)
 	{
+		// NOTES TO DO
+		// - Check the joystick, if operator moved joystick, steervalve ready = 80, else = 16
+		// - If intend to steer mod the joystick wheels data leave everything else unmofified, else leave alone
 
+		// Example
+		//	data->bytes[3] = 0x46; 
 	}
 
 	// From Machine ECU Side (CAN 3)
 	else if (fromBus == 3)
 	{
-
+		// NOTES TO DO
+		// - Read the wheel angle to estcurve, as is 0 - 65000ish (16bit)
 	}
 
 }
