@@ -39,7 +39,6 @@ void GGA_Handler() //Rec'd GGA
     parser.getArg(0, fixTime);
 
     String tempString = fixTime;
-    utcTime = tempString.toFloat();
 
     // latitude
     parser.getArg(1, latitude);
@@ -53,7 +52,6 @@ void GGA_Handler() //Rec'd GGA
     parser.getArg(5, fixQuality);
 
     tempString = fixQuality;
-    fixTypeGGA = tempString.toInt();
 
 #ifdef isAllInOneBoard
     if (*fixQuality == '4') {
@@ -69,13 +67,11 @@ void GGA_Handler() //Rec'd GGA
     parser.getArg(6, numSats);
 
     tempString = numSats;
-    satsGGA = tempString.toInt();
 
     // HDOP
     parser.getArg(7, HDOP);
 
     tempString = HDOP;
-    hdopGGA = tempString.toFloat();
 
     // altitude
     parser.getArg(8, altitude);
@@ -84,13 +80,11 @@ void GGA_Handler() //Rec'd GGA
     parser.getArg(10, geoid);
 
     tempString = geoid;
-    geoidalGGA = tempString.toFloat();
 
     // time of last DGPS update
     parser.getArg(12, ageDGPS);
 
     tempString = ageDGPS;
-    rtkAgeGGA = tempString.toFloat();
 
     bnoTimer = 0;
     bnoTrigger = true;
@@ -114,29 +108,6 @@ void GGA_Handler() //Rec'd GGA
         itoa(65535, imuHeading, 10);       //65535 is max value to stop AgOpen using IMU in Panda
         BuildNmea();
     }
-    /*
-    Serial.println(utcTime,1);
-    Serial.println(geoidalGGA, 2);
-    Serial.println(fixTypeGGA);
-    Serial.println(satsGGA);
-    Serial.println(hdopGGA,2);
-    Serial.println(rtkAgeGGA, 1);
-    Serial.println("...........");
-    */
-
-    static int GPS_1hz = 0;
-
-    if (sendGPStocan2)
-    {
-        if (GPS_1hz > 9)
-        {
-            GPS_1hz = 0;
-            sendcan2_129029();
-        }
-
-        GPS_1hz++;
-    }
-
 }
 
 void VTG_Handler()
@@ -146,13 +117,6 @@ void VTG_Handler()
 
     // vtg Speed knots
     parser.getArg(4, speedKnots);
-
-
-}
-
-void ZDA_Handler()
-{
-
 }
 
 void imuHandler()
@@ -202,11 +166,6 @@ void imuHandler()
             itoa(bnoData.pitchX10, imuRoll, 10);
         }
 
-        //Serial.print(rvc.angCounter);
-        //Serial.print(", ");
-        //Serial.print(bnoData.angVel);
-        //Serial.print(", ");
-        // YawRate
         if (rvc.angCounter > 0)
         {
             angVel = ((float)bnoData.angVel) / (float)rvc.angCounter;
