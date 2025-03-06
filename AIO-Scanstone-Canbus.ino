@@ -36,7 +36,6 @@ int flowControl = 0;
 int flowControlHMS = 0;
 
 
-
 String inoVersion = ("\r\nAgOpenGPS Scanstone ToolSteer 05.03.2025\r\n");
 
 //How many degrees before decreasing Max PWM
@@ -339,9 +338,6 @@ void setup()
 	SerialIMU->begin(115200);
 	rvc.begin(SerialIMU);
 
-	// Check for i2c BNO08x
-	uint8_t error;
-
 	static elapsedMillis rvcBnoTimer = 0;
 	Serial.println("\r\nChecking for serial BNO08x");
 	while (rvcBnoTimer < 1000)
@@ -587,10 +583,7 @@ void loop()
 
 		//DETERMINE ACTUAL STEERING POSITION  *********From CAN-Bus************
 
-
-		if (intendToSteer == 0) setCurve = estCurve;  //Not steering so setCurve = estCurve
-
-		steeringPosition = (setCurve - 32128 + steerSettings.wasOffset);
+		steeringPosition = (estCurve - 32128 + steerSettings.wasOffset);
 		steerAngleActual = (float)(steeringPosition) / (steerSettings.steerSensorCounts * 10);  // x10 for full 16bit range, not sure if needed
 
 		//Ackerman fix
